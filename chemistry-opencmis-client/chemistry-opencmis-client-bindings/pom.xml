@@ -36,6 +36,7 @@
     
     <properties>
         <parentBasedir>../../</parentBasedir>
+        <opencmis.integration.tests.skip>true</opencmis.integration.tests.skip>
     </properties>
 
     <build>
@@ -84,6 +85,38 @@
                         <Bundle-DocURL>${project.url}</Bundle-DocURL>
                     </instructions>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/atompub/SimpleReadOnlyTests.java</exclude>
+                        <exclude>**/atompub/SimpleReadWriteTests.java</exclude>
+                        <exclude>**/webservices/SimpleReadOnlyTests.java</exclude>
+                        <exclude>**/webservices/SimpleReadWriteTests.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <skipITs>${opencmis.integration.tests.skip}</skipITs>
+                    <includes>
+                        <include>**/atompub/SimpleReadOnlyTests.java</include>
+                        <include>**/atompub/SimpleReadWriteTests.java</include>
+                        <include>**/webservices/SimpleReadOnlyTests.java</include>
+                        <include>**/webservices/SimpleReadWriteTests.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>run-cmis-integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             
         </plugins>

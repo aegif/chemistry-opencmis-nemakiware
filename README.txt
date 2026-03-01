@@ -22,6 +22,23 @@ You need Maven 3 with Java 17 (or higher) for the build.
 This fork uses Java 17 as the baseline and validates build compatibility
 with both Java 17 and Java 21 in GitHub Actions.
 
+Client-Bindings Integration Tests
+=================================
+
+The `SimpleReadOnlyTests` and `SimpleReadWriteTests` in `client-bindings`
+require a running CMIS server and are excluded from `mvn test` by default.
+
+To run them against a NemakiWare server:
+
+    mvn -f chemistry-opencmis-client/chemistry-opencmis-client-bindings/pom.xml \
+      verify \
+      -Dopencmis.integration.tests.skip=false \
+      -Dopencmis.test.username=admin \
+      -Dopencmis.test.password=admin \
+      -Dopencmis.test.repository=bedroom \
+      -Dopencmis.test.atompub.url=http://localhost:8080/core/atom \
+      -Dopencmis.test.webservices.url=http://localhost:8080/core/services/
+
 
 GitHub Packages (NemakiWare fork)
 =================================

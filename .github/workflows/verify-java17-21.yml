@@ -39,3 +39,9 @@ chemistry-opencmis-server/chemistry-opencmis-server-support,\
 chemistry-opencmis-server/chemistry-opencmis-server-bindings,\
 chemistry-opencmis-test/chemistry-opencmis-test-tck"
           mvn -DskipTests -pl "${MODULES}" -am package
+
+      - name: Run client-bindings unit tests
+        run: |
+          mvn -f chemistry-opencmis-client/chemistry-opencmis-client-bindings/pom.xml \
+            test \
+            -Dopencmis.integration.tests.skip=true

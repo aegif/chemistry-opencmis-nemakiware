@@ -54,8 +54,6 @@ public class QueryUtilStrict extends QueryUtilBase<CmisQueryWalker> {
     @Override
     public CommonTree parseStatement() throws RecognitionException {
         CharStream input = new ANTLRStringStream(statement);
-//    		InputStream lexerInput = new ByteArrayInputStream(statement.getBytes());
-//        CharStream input = new ANTLRInputStream(lexerInput, "UTF-8");
         CmisQlStrictLexer lexer = new CmisQlStrictLexer(input);
         tokens = new CommonTokenStream(lexer);
         CmisQlStrictParser parser = new CmisQlStrictParser(tokens);

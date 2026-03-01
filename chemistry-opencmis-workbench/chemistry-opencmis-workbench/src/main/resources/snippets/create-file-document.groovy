@@ -17,8 +17,8 @@
  * under the License.
  */
 
-Folder parentFolder = ...  // session.getObjectByPath("/")
-File file = ...  // new File("/path/to/file") 
+Folder parentFolder = ...
+File file = ...
 
 def properties = [
     (PropertyIds.OBJECT_TYPE_ID): "cmis:document",

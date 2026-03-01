@@ -34,7 +34,6 @@ public class DeleteWorker extends InfoWorkbenchWorker {
     private boolean allversions;
     private UnfileObject unfile;
     private boolean continueOnFailure;
-    private boolean deleteTree;
 
     // out
     private List<String> failedIds;
@@ -50,7 +49,6 @@ public class DeleteWorker extends InfoWorkbenchWorker {
         this.allversions = allversions;
         this.unfile = UnfileObject.DELETE;
         this.continueOnFailure = true;
-        this.deleteTree = false;
     }
 
     public DeleteWorker(Component comp, Folder folder, boolean allversions, UnfileObject unfile,
@@ -61,7 +59,6 @@ public class DeleteWorker extends InfoWorkbenchWorker {
         this.allversions = allversions;
         this.unfile = unfile;
         this.continueOnFailure = continueOnFailure;
-        this.deleteTree = true;
     }
 
     @Override
@@ -76,7 +73,7 @@ public class DeleteWorker extends InfoWorkbenchWorker {
 
     @Override
     protected Object doInBackground() throws Exception {
-        if (cmisObject instanceof Folder && deleteTree) {
+        if (cmisObject instanceof Folder) {
             failedIds = ((Folder) cmisObject).deleteTree(allversions, unfile, continueOnFailure);
         } else {
             cmisObject.delete(allversions);

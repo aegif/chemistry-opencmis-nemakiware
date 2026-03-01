@@ -24,11 +24,11 @@ import static org.apache.chemistry.opencmis.commons.impl.WSConverter.setHolderVa
 
 import java.math.BigInteger;
 
-import javax.annotation.Resource;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.soap.MTOM;
+import jakarta.annotation.Resource;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.data.ObjectList;
 import org.apache.chemistry.opencmis.commons.enums.CmisVersion;
@@ -52,7 +52,7 @@ public class DiscoveryService extends AbstractService implements DiscoveryServic
     @Override
     public void getContentChanges(String repositoryId, Holder<String> changeLogToken, Boolean includeProperties,
             String filter, Boolean includePolicyIds, Boolean includeAcl, BigInteger maxItems,
-            CmisExtensionType extension, Holder<CmisObjectListType> objects) throws CmisException {
+            CmisExtensionType extension, jakarta.xml.ws.Holder<CmisObjectListType> objects) throws CmisException {
         CmisService service = null;
         CmisVersion cmisVersion = null;
         try {

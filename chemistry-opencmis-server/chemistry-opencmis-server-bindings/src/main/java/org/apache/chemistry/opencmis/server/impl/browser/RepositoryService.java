@@ -31,9 +31,9 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.chemistry.opencmis.commons.data.RepositoryInfo;
 import org.apache.chemistry.opencmis.commons.definitions.TypeDefinition;
@@ -158,10 +158,7 @@ public class RepositoryService {
                     cookieValue = createCookieValue(0, null, CmisInvalidArgumentException.EXCEPTION_NAME,
                             "Unknown transaction!");
                 } else {
-                    if (!(JSONValue.parse(cookieValue) instanceof JSONObject)) {
-                        cookieValue = createCookieValue(0, null, CmisInvalidArgumentException.EXCEPTION_NAME,
-                                "Invalid cookie value!");
-                    }
+                    JSONValue.parse(cookieValue);
                 }
             } catch (Exception pe) {
                 cookieValue = createCookieValue(0, null, CmisRuntimeException.EXCEPTION_NAME, "Cookie pasring error!");
@@ -181,6 +178,13 @@ public class RepositoryService {
         @Override
         public void serve(CallContext context, CmisService service, String repositoryId, HttpServletRequest request,
                 HttpServletResponse response) throws Exception {
+            
+            // CRITICAL DEBUG: OpenCMIS GetTypeChildren.serve() method reached
+            System.err.println("*** OPENCMIS GETTYPECHILDREN DEBUG: serve() method called ***");
+            System.err.println("*** OPENCMIS DEBUG: repositoryId = " + repositoryId + " ***");
+            System.err.println("*** OPENCMIS DEBUG: request URI = " + request.getRequestURI() + " ***");
+            System.err.println("*** OPENCMIS DEBUG: query string = " + request.getQueryString() + " ***");
+            
             assert context != null;
             assert service != null;
             assert repositoryId != null;

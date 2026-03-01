@@ -21,11 +21,11 @@ package org.apache.chemistry.opencmis.server.impl.webservices;
 import static org.apache.chemistry.opencmis.commons.impl.WSConverter.convertExtensionHolder;
 import static org.apache.chemistry.opencmis.commons.impl.WSConverter.setExtensionValues;
 
-import javax.annotation.Resource;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.soap.MTOM;
+import jakarta.annotation.Resource;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.data.ExtensionsData;
 import org.apache.chemistry.opencmis.commons.impl.jaxb.CmisException;
@@ -44,7 +44,7 @@ public class MultiFilingService extends AbstractService implements MultiFilingSe
 
     @Override
     public void addObjectToFolder(String repositoryId, String objectId, String folderId, Boolean allVersions,
-            Holder<CmisExtensionType> extension) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -71,7 +71,7 @@ public class MultiFilingService extends AbstractService implements MultiFilingSe
 
     @Override
     public void removeObjectFromFolder(String repositoryId, String objectId, String folderId,
-            Holder<CmisExtensionType> extension) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);

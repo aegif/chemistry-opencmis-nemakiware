@@ -21,8 +21,7 @@ package org.apache.chemistry.opencmis.commons;
 /**
  * Session parameter constants.
  * 
- * <table class="chemistry-table">
- * <caption>Session Parameters</caption>
+ * <table border="2" rules="all" cellpadding="4" summary="Session Parameters">
  * <tr>
  * <th>Constant</th>
  * <th>Description</th>

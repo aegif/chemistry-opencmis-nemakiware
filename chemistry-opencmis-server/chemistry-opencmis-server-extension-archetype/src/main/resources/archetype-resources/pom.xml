@@ -19,11 +19,10 @@
             <plugin>
                 <inherited>true</inherited>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
+                <version>3.0</version>
                 <configuration>
-                    <!-- requires at least Java 8 -->
-                    <target>1.8</target>
-                    <source>1.8</source>
+                    <target>1.6</target>
+                    <source>1.6</source>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
@@ -44,9 +43,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>3.1.0</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>2.4</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

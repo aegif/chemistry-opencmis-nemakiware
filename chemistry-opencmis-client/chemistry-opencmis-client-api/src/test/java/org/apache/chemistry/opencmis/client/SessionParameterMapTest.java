@@ -31,7 +31,7 @@ import java.util.Map;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import javax.xml.ws.handler.HandlerResolver;
+// HandlerResolver not available in current Jakarta XML Web Services implementation
 
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
@@ -203,7 +203,7 @@ public class SessionParameterMapTest {
         }
 
         @Override
-        public HandlerResolver getHandlerResolver() {
+        public Object getHandlerResolver() {
             return null;
         }
 

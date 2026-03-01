@@ -28,8 +28,8 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.apache.chemistry.opencmis.commons.PropertyIds;
@@ -629,6 +629,10 @@ public class ObjectService {
 
             if (content == null || content.getStream() == null) {
                 throw new CmisRuntimeException("Content stream is null!");
+            }
+
+            if (content.getBigLength() != null && content.getBigLength().signum() == 1) {
+                response.setContentLengthLong(content.getBigLength().longValue());
             }
 
             // set HTTP headers, if requested by the server implementation

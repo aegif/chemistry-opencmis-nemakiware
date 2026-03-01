@@ -195,7 +195,7 @@ public final class SessionFactoryFinder {
             }
 
             try {
-                result = (SessionFactory) clazz.getDeclaredConstructor().newInstance();
+                result = (SessionFactory) clazz.newInstance();
             } catch (Exception e) {
                 throw new InstantiationException("Could not create SessionFactory object!");
             }

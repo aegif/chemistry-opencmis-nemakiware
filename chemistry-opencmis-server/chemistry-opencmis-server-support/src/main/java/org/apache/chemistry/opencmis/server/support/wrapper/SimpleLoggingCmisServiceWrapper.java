@@ -21,7 +21,7 @@ package org.apache.chemistry.opencmis.server.support.wrapper;
 import java.math.BigInteger;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.chemistry.opencmis.commons.data.Acl;
 import org.apache.chemistry.opencmis.commons.data.AllowableActions;
@@ -456,7 +456,7 @@ public class SimpleLoggingCmisServiceWrapper extends AbstractCmisServiceWrapper 
     @Override
     public List<ObjectData> getAppliedPolicies(String repositoryId, String objectId, String filter,
             ExtensionsData extension) {
-        log("getAppliedPolicies", repositoryId);
+        log("getRepositoryInfos", repositoryId);
         return getWrappedService().getAppliedPolicies(repositoryId, objectId, filter, extension);
     }
 

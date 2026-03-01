@@ -19,13 +19,13 @@
 package org.apache.chemistry.opencmis.server.impl.webservices;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Locale;
 
-import javax.servlet.ReadListener;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.chemistry.opencmis.commons.impl.MimeHelper;
 
@@ -42,7 +42,7 @@ public class ProtectionRequestWrapper extends HttpServletRequestWrapper {
     private static final byte DASH = 0x2D;
 
     private final int messageMax;
-    private final ServletInputStream orgStream;
+    private final InputStream orgStream;
     private final ServletInputStream checkedStream;
     private final byte[] boundary;
 
@@ -157,21 +157,6 @@ public class ProtectionRequestWrapper extends HttpServletRequestWrapper {
         @Override
         public void close() throws IOException {
             orgStream.close();
-        }
-
-        @Override
-        public boolean isFinished() {
-            return orgStream.isFinished();
-        }
-
-        @Override
-        public boolean isReady() {
-            return orgStream.isReady();
-        }
-
-        @Override
-        public void setReadListener(ReadListener readListener) {
-            orgStream.setReadListener(readListener);
         }
 
         private void checkBoundary(int startPos) {
@@ -300,6 +285,21 @@ public class ProtectionRequestWrapper extends HttpServletRequestWrapper {
             byte[] newBuffer = new byte[linebuffer.length + expand];
             System.arraycopy(linebuffer, 0, newBuffer, 0, pos);
             linebuffer = newBuffer;
+        }
+
+        @Override
+        public boolean isFinished() {
+            return false;
+        }
+
+        @Override
+        public boolean isReady() {
+            return true;
+        }
+
+        @Override
+        public void setReadListener(jakarta.servlet.ReadListener readListener) {
+            // Not implemented for this wrapper
         }
     }
 }

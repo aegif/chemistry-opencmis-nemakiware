@@ -38,12 +38,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.ws.BindingProvider;
-import javax.xml.ws.Service;
-import javax.xml.ws.WebServiceFeature;
-import javax.xml.ws.handler.HandlerResolver;
-import javax.xml.ws.handler.MessageContext;
-import javax.xml.ws.http.HTTPException;
+import jakarta.xml.ws.BindingProvider;
+import jakarta.xml.ws.Service;
+import jakarta.xml.ws.WebServiceFeature;
+import jakarta.xml.ws.handler.HandlerResolver;
+import jakarta.xml.ws.handler.MessageContext;
+import jakarta.xml.ws.http.HTTPException;
 
 import org.apache.chemistry.opencmis.client.bindings.impl.ClientVersion;
 import org.apache.chemistry.opencmis.client.bindings.impl.CmisBindingsHelper;
@@ -203,9 +203,9 @@ public abstract class AbstractPortProvider {
 
             AuthenticationProvider authProvider = CmisBindingsHelper.getAuthenticationProvider(getSession());
             if (authProvider != null) {
-                HandlerResolver handlerResolver = authProvider.getHandlerResolver();
-                if (handlerResolver != null) {
-                    newService.setHandlerResolver(handlerResolver);
+                Object handlerResolver = authProvider.getHandlerResolver();
+                if (handlerResolver instanceof HandlerResolver) {
+                    newService.setHandlerResolver((HandlerResolver) handlerResolver);
                 }
             }
 

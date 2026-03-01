@@ -27,7 +27,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -44,7 +43,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.text.AttributeSet;
@@ -114,17 +112,13 @@ public class ConsoleHelper {
             console.run();
 
             // add menu
-            JMenuBar consoleMenuBar = console.getFrame().getRootPane().getJMenuBar();
-
             JMenu cmisMenu = new JMenu("CMIS");
-            cmisMenu.setMnemonic(KeyEvent.VK_M);
-            consoleMenuBar.add(cmisMenu);
+            console.getFrame().getRootPane().getJMenuBar().add(cmisMenu);
 
             addConsoleMenu(cmisMenu, "CMIS 1.0 Specification",
                     new URI("https://docs.oasis-open.org/cmis/CMIS/v1.0/os/cmis-spec-v1.0.html"));
             addConsoleMenu(cmisMenu, "CMIS 1.1 Specification",
                     new URI("https://docs.oasis-open.org/cmis/CMIS/v1.1/CMIS-v1.1.html"));
-            cmisMenu.addSeparator();
             addConsoleMenu(cmisMenu, "OpenCMIS Documentation",
                     new URI("https://chemistry.apache.org/java/opencmis.html"));
             addConsoleMenu(cmisMenu, "OpenCMIS Code Samples",
@@ -147,18 +141,6 @@ public class ConsoleHelper {
             });
             cmisMenu.add(menuItem);
 
-            JMenu snippetsMenu = new JMenu("Snippets");
-            snippetsMenu.setMnemonic(KeyEvent.VK_N);
-            consoleMenuBar.add(snippetsMenu);
-
-            for (FileEntry entry : readSnippetLibrary()) {
-                String snippet = ClientHelper.readFileAndRemoveHeader(entry.getFile());
-
-                JMenuItem snippetItem = new JMenuItem(entry.getName());
-                snippetItem.addActionListener(new ConsoleInsertActionListener(console, snippet));
-                snippetsMenu.add(snippetItem);
-            }
-
             // add popup menu
 
             final JPopupMenu popup = new JPopupMenu();
@@ -174,6 +156,19 @@ public class ConsoleHelper {
             final JMenuItem pasteItem = new JMenuItem(new DefaultEditorKit.PasteAction());
             pasteItem.setText("Paste");
             popup.add(pasteItem);
+
+            popup.addSeparator();
+
+            JMenu snippetsSubMenu = new JMenu("Snippets");
+            popup.add(snippetsSubMenu);
+
+            for (FileEntry entry : readSnippetLibrary()) {
+                String snippet = ClientHelper.readFileAndRemoveHeader(entry.getFile());
+
+                JMenuItem snippetItem = new JMenuItem(entry.getName());
+                snippetItem.addActionListener(new ConsolePopupMenuActionListener(console, snippet));
+                snippetsSubMenu.add(snippetItem);
+            }
 
             console.getInputArea().addMouseListener(new MouseAdapter() {
                 @Override
@@ -328,11 +323,11 @@ public class ConsoleHelper {
 
     // ---
 
-    private static class ConsoleInsertActionListener implements ActionListener {
+    private static class ConsolePopupMenuActionListener implements ActionListener {
         private final Console console;
         private final String snippet;
 
-        public ConsoleInsertActionListener(Console console, String snippet) {
+        public ConsolePopupMenuActionListener(Console console, String snippet) {
             this.console = console;
             this.snippet = snippet;
         }

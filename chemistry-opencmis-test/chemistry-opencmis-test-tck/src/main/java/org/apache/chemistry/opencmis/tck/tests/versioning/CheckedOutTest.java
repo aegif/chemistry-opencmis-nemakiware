@@ -120,7 +120,18 @@ public class CheckedOutTest extends AbstractSessionTest {
             }
 
             String[] propertiesToCheck = getAllProperties(pwc);
-            addResult(checkObject(session, pwc, propertiesToCheck, "PWC check: " + pwc.getId()));
+            // DEBUG: Print validation result details
+            CmisTestResult validationResult = checkObject(session, pwc, propertiesToCheck, "PWC check: " + pwc.getId());
+            if (validationResult != null) {
+                System.err.println("[PWC VALIDATION DEBUG] PWC " + pwc.getId() + " validation failed:");
+                System.err.println("[PWC VALIDATION DEBUG] Error: " + validationResult.getMessage());
+                if (validationResult.getChildren() != null) {
+                    for (CmisTestResult child : validationResult.getChildren()) {
+                        System.err.println("[PWC VALIDATION DEBUG]   - " + child.getMessage());
+                    }
+                }
+            }
+            addResult(validationResult);
 
             if (session.getRepositoryInfo().getCmisVersion() == CmisVersion.CMIS_1_0) {
                 f = createResult(WARNING, "PWC is not the latest version! Id: " + pwc.getId()

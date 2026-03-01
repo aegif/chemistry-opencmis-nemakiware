@@ -41,6 +41,7 @@ public class QueryInFolderTest extends AbstractQueryTest {
 
     private static final String CONTENT = "TCK test content.";
 
+    // Test object creation counts (5 level-1 docs + 5 level-1 folders + 5x5 level-2 docs + 5x5 level-2 folders = 60 objects total)
     private static final int LEVEL1_DOCS = 5;
     private static final int LEVEL1_FOLDERS = 5;
     private static final int LEVEL2_DOCS = 5;

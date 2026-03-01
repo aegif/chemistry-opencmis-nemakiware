@@ -28,7 +28,6 @@ import java.util.Map;
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Folder;
 import org.apache.chemistry.opencmis.client.api.ItemIterable;
-import org.apache.chemistry.opencmis.client.api.ObjectId;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.tck.CmisTestResult;
 import org.apache.chemistry.opencmis.tck.impl.AbstractSessionTest;
@@ -118,13 +117,10 @@ public class CreateAndDeleteFolderTest extends AbstractSessionTest {
             path.append(folderName + i);
         }
 
-        ObjectId deepestFolderId = session.createPath(testFolder, path.toString(), getFolderTestTypeId());
-
-        Folder deepestFolder = (Folder) session.getObject(deepestFolderId, SELECT_ALL_NO_CACHE_OC);
-        String testPath = deepestFolder.getPath();
+        session.createPath(testFolder, path.toString(), getFolderTestTypeId());
 
         for (int i = 0; i < depth; i++) {
-            CmisObject folderObj = session.getObjectByPath(testPath, SELECT_ALL_NO_CACHE_OC);
+            CmisObject folderObj = session.getObjectByPath(path.toString(), SELECT_ALL_NO_CACHE_OC);
 
             if (folderObj instanceof Folder) {
                 session.deleteByPath(((Folder) folderObj).getPath());
@@ -132,7 +128,7 @@ public class CreateAndDeleteFolderTest extends AbstractSessionTest {
                 addResult(createResult(FAILURE, "Just created folder is not a folder! Id: " + folderObj.getId()));
             }
 
-            testPath = testPath.substring(0, testPath.lastIndexOf("/"));
+            path.delete(path.lastIndexOf("/"), path.length());
         }
 
         addResult(createInfoResult("Tested the creation of a folder hierarchy with a depth of " + (depth + 1)

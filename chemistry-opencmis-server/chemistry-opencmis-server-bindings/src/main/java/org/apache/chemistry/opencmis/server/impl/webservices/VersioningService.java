@@ -28,11 +28,11 @@ import static org.apache.chemistry.opencmis.commons.impl.WSConverter.setHolderVa
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Resource;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.soap.MTOM;
+import jakarta.annotation.Resource;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.data.ExtensionsData;
 import org.apache.chemistry.opencmis.commons.data.ObjectData;
@@ -59,7 +59,7 @@ public class VersioningService extends AbstractService implements VersioningServ
     public WebServiceContext wsContext;
 
     @Override
-    public void cancelCheckOut(String repositoryId, String objectId, Holder<CmisExtensionType> extension)
+    public void cancelCheckOut(String repositoryId, String objectId, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
         CmisService service = null;
         try {
@@ -88,7 +88,7 @@ public class VersioningService extends AbstractService implements VersioningServ
     @Override
     public void checkIn(String repositoryId, Holder<String> objectId, Boolean major, CmisPropertiesType properties,
             CmisContentStreamType contentStream, String checkinComment, List<String> policies,
-            CmisAccessControlListType addAces, CmisAccessControlListType removeAces, Holder<CmisExtensionType> extension)
+            CmisAccessControlListType addAces, CmisAccessControlListType removeAces, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
         CmisService service = null;
         try {
@@ -120,7 +120,7 @@ public class VersioningService extends AbstractService implements VersioningServ
     }
 
     @Override
-    public void checkOut(String repositoryId, Holder<String> objectId, Holder<CmisExtensionType> extension,
+    public void checkOut(String repositoryId, Holder<String> objectId, jakarta.xml.ws.Holder<CmisExtensionType> extension,
             Holder<Boolean> contentCopied) throws CmisException {
         CmisService service = null;
         try {

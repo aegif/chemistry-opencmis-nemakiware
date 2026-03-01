@@ -23,11 +23,6 @@ import org.apache.chemistry.opencmis.commons.enums.*
 import org.apache.chemistry.opencmis.client.api.*
 import org.apache.chemistry.opencmis.client.util.*
 
+// def cmis = new scripts.CMIS(session)
 // println session.repositoryInfo.name
-//
-// def rootFolder = session.rootFolder
-// println rootFolder.name
-// 
-// rootFolder.getChildren().each { child ->
-//    println "${child.name} (${child.id}) [${child.type.id}]"
-// }
+// cmis.printObjectSummary "/"

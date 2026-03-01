@@ -22,9 +22,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.mockito.Mockito;
 
@@ -91,11 +90,7 @@ public class HttpRequestMockHelper {
 
         @Override
         public boolean isFinished() {
-            try {
-                return stream.available() == 0;
-            } catch (IOException e) {
-                return true;
-            }
+            return false;
         }
 
         @Override
@@ -104,7 +99,8 @@ public class HttpRequestMockHelper {
         }
 
         @Override
-        public void setReadListener(ReadListener readListener) {
+        public void setReadListener(jakarta.servlet.ReadListener readListener) {
+            // Not implemented for test stub
         }
     }
 }

@@ -29,7 +29,7 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import javax.xml.stream.XMLStreamException;
 
 import org.apache.chemistry.opencmis.commons.data.ObjectData;

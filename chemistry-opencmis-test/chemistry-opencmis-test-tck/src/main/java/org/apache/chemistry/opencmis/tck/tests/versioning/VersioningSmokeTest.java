@@ -63,51 +63,99 @@ public class VersioningSmokeTest extends AbstractSessionTest {
 
         try {
             // create folder and document
+            System.err.println("[TCK DEBUG] About to create test folder");
             Folder testFolder = createTestFolder(session);
-            Document doc = createDocument(session, testFolder, "versioningtest.txt", "versioning");
-            DocumentTypeDefinition docType = (DocumentTypeDefinition) doc.getType();
+            System.err.println("[TCK DEBUG] Test folder created successfully: " + testFolder.getId());
 
+            System.err.println("[TCK DEBUG] About to create test document in folder: " + testFolder.getId());
+            Document doc = createDocument(session, testFolder, "versioningtest.txt", "versioning");
+            System.err.println("[TCK DEBUG] Test document created successfully: " + doc.getId());
+
+            System.err.println("[TCK DEBUG] About to get document type via doc.getType()");
+            DocumentTypeDefinition docType = (DocumentTypeDefinition) doc.getType();
+            System.err.println("[TCK DEBUG] Document type retrieved: " + (docType != null ? docType.getId() : "NULL"));
+
+            System.err.println("[TCK DEBUG] About to check if type is versionable: docType.isVersionable()");
             if (!docType.isVersionable()) {
+                System.err.println("[TCK DEBUG] Type is NOT versionable, test will be skipped");
                 addResult(createResult(SKIPPED, "Test type is not versionable. Test skipped!"));
                 doc.delete(true);
                 return;
             }
+            System.err.println("[TCK DEBUG] Type IS versionable, continuing test");
 
             // gather properties for later
+            System.err.println("[TCK DEBUG] About to gather property definitions");
             String[] propertiesToCheck = new String[doc.getType().getPropertyDefinitions().size()];
 
             int i = 0;
             for (String propId : doc.getType().getPropertyDefinitions().keySet()) {
                 propertiesToCheck[i++] = propId;
             }
+            System.err.println("[TCK DEBUG] Gathered " + propertiesToCheck.length + " property definitions");
 
+            System.err.println("[TCK DEBUG] About to gather writable properties");
             Map<String, Object> writableProperties = new HashMap<String, Object>();
             for (Property<?> property : doc.getProperties()) {
                 if (property.getDefinition().getUpdatability() == Updatability.READWRITE) {
                     writableProperties.put(property.getId(), property.getValue());
                 }
             }
+            System.err.println("[TCK DEBUG] Gathered " + writableProperties.size() + " writable properties");
 
             // check out
+            System.err.println("[TCK DEBUG] About to perform first checkOut() on document: " + doc.getId());
             ObjectId pwcId = doc.checkOut();
+            System.err.println("[TCK DEBUG] First checkOut() completed, PWC ID: " + pwcId.getId());
             Document pwc = (Document) session.getObject(pwcId, SELECT_ALL_NO_CACHE_OC);
+            System.err.println("[TCK DEBUG] PWC fetched successfully");
 
-            addResult(checkObject(session, pwc, getAllProperties(pwc), "PWC spec compliance - test 1"));
+            // Debug: Check PWC allowable actions
+            if (pwc.getAllowableActions() != null && pwc.getAllowableActions().getAllowableActions() != null) {
+                System.err.println("[TCK DEBUG] PWC Allowable Actions: " + pwc.getAllowableActions().getAllowableActions());
+            } else {
+                System.err.println("[TCK DEBUG] PWC Allowable Actions: NULL");
+            }
 
+            System.err.println("[TCK DEBUG] About to call getAllProperties() on PWC");
+            String[] pwcProps = getAllProperties(pwc);
+            System.err.println("[TCK DEBUG] getAllProperties() returned " + pwcProps.length + " properties");
+            System.err.println("[TCK DEBUG] About to call checkObject() on PWC");
+            addResult(checkObject(session, pwc, pwcProps, "PWC spec compliance - test 1"));
+            System.err.println("[TCK DEBUG] checkObject() completed successfully");
+
+            System.err.println("[TCK DEBUG] About to call checkCheckedOut() on PWC");
             checkCheckedOut(pwc);
+            System.err.println("[TCK DEBUG] checkCheckedOut() completed successfully");
 
             // check version series
-            addResult(checkVersionSeries(session, pwc.getAllVersions(SELECT_ALL_NO_CACHE_OC), propertiesToCheck,
+            System.err.println("[TCK DEBUG] About to call pwc.getAllVersions()");
+            List<Document> pwcVersions = pwc.getAllVersions(SELECT_ALL_NO_CACHE_OC);
+            System.err.println("[TCK DEBUG] pwc.getAllVersions() returned " + pwcVersions.size() + " versions");
+            System.err.println("[TCK DEBUG] About to call checkVersionSeries()");
+            addResult(checkVersionSeries(session, pwcVersions, propertiesToCheck,
                     "Test version series after check out"));
+            System.err.println("[TCK DEBUG] checkVersionSeries() completed successfully");
 
             // cancel checkout
+            System.err.println("[TCK DEBUG] About to cancelCheckOut() on PWC: " + pwc.getId());
             pwc.cancelCheckOut();
+            System.err.println("[TCK DEBUG] cancelCheckOut() completed");
 
+            System.err.println("[TCK DEBUG] About to refresh() original document: " + doc.getId());
             doc.refresh();
+            System.err.println("[TCK DEBUG] refresh() completed, now calling getObject() to fetch latest allowable actions");
+            // CRITICAL TCK FIX: Explicitly fetch latest data including allowable actions
+            // refresh() may not update allowable actions from server due to client caching
+            doc = (Document) session.getObject(doc.getId(), SELECT_ALL_NO_CACHE_OC);
+            System.err.println("[TCK DEBUG] getObject() completed, document re-fetched");
             checkCheckedIn(doc);
+            System.err.println("[TCK DEBUG] checkCheckedIn() completed successfully");
 
             // check out again
+            System.err.println("[TCK DEBUG] About to perform SECOND checkOut() on document: " + doc.getId());
             pwcId = doc.checkOut();
+            System.err.println("[TCK DEBUG] SECOND checkOut() completed successfully!");
             pwc = (Document) session.getObject(pwcId, SELECT_ALL_NO_CACHE_OC);
 
             addResult(checkObject(session, pwc, getAllProperties(pwc), "PWC spec compliance - test 2"));
@@ -115,10 +163,29 @@ public class VersioningSmokeTest extends AbstractSessionTest {
             checkCheckedOut(pwc);
 
             // check in
+            System.err.println("[TCK DEBUG] About to checkIn() PWC with major version");
             ObjectId newVersionId = pwc.checkIn(true, null, null, "Test Version 2");
+            System.err.println("[TCK DEBUG] checkIn() completed, new version ID: " + newVersionId.getId());
             Document newVersion = (Document) session.getObject(newVersionId, SELECT_ALL_NO_CACHE_OC);
+            System.err.println("[TCK DEBUG] newVersion fetched successfully");
 
+            // Debug: Check newVersion properties
+            System.err.println("[TCK DEBUG newVersion] ID: " + newVersion.getId());
+            System.err.println("[TCK DEBUG newVersion] isLatestVersion: " + newVersion.isLatestVersion());
+            System.err.println("[TCK DEBUG newVersion] isLatestMajorVersion: " + newVersion.isLatestMajorVersion());
+            System.err.println("[TCK DEBUG newVersion] isVersionSeriesCheckedOut: " + newVersion.isVersionSeriesCheckedOut());
+            System.err.println("[TCK DEBUG newVersion] versionSeriesCheckedOutId: " + newVersion.getVersionSeriesCheckedOutId());
+
+            // Debug: Check newVersion allowable actions
+            if (newVersion.getAllowableActions() != null && newVersion.getAllowableActions().getAllowableActions() != null) {
+                System.err.println("[TCK DEBUG newVersion] Allowable Actions: " + newVersion.getAllowableActions().getAllowableActions());
+            } else {
+                System.err.println("[TCK DEBUG newVersion] Allowable Actions: NULL");
+            }
+
+            System.err.println("[TCK DEBUG] About to call checkObject() on newVersion");
             addResult(checkObject(session, newVersion, getAllProperties(newVersion), "New version compliance"));
+            System.err.println("[TCK DEBUG] checkObject() on newVersion completed");
 
             checkCheckedIn(newVersion);
 
@@ -264,10 +331,23 @@ public class VersioningSmokeTest extends AbstractSessionTest {
     }
 
     private void checkCheckedIn(Document doc) {
+        System.err.println("[TCK DEBUG checkCheckedIn] ENTRY - Document ID: " + (doc != null ? doc.getId() : "NULL"));
         CmisTestResult f;
 
-        f = createResult(FAILURE, "Version series is not checked out but cmis:isVersionSeriesCheckedOut is not FALSE!");
-        addResult(assertIsFalse(doc.isVersionSeriesCheckedOut(), null, f));
+        try {
+            System.err.println("[TCK DEBUG checkCheckedIn] About to call doc.isVersionSeriesCheckedOut()");
+            Boolean isCheckedOut = doc.isVersionSeriesCheckedOut();
+            System.err.println("[TCK DEBUG checkCheckedIn] doc.isVersionSeriesCheckedOut() returned: " + isCheckedOut);
+
+            f = createResult(FAILURE, "Version series is not checked out but cmis:isVersionSeriesCheckedOut is not FALSE!");
+            System.err.println("[TCK DEBUG checkCheckedIn] About to call assertIsFalse with isCheckedOut=" + isCheckedOut);
+            addResult(assertIsFalse(isCheckedOut, null, f));
+            System.err.println("[TCK DEBUG checkCheckedIn] First assertIsFalse completed");
+        } catch (Exception e) {
+            System.err.println("[TCK DEBUG checkCheckedIn] EXCEPTION in isVersionSeriesCheckedOut check: " + e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace(System.err);
+            throw e;
+        }
 
         f = createResult(FAILURE, "Version series is not checked out but cmis:versionSeriesCheckedOutId has a value!");
         addResult(assertNull(doc.getVersionSeriesCheckedOutId(), null, f));

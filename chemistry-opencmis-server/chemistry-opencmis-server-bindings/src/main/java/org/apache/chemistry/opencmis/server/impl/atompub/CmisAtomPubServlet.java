@@ -50,10 +50,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.chemistry.opencmis.commons.enums.CmisVersion;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
@@ -86,7 +86,7 @@ import org.apache.chemistry.opencmis.server.shared.NoBodyHttpServletResponseWrap
 import org.apache.chemistry.opencmis.server.shared.QueryStringHttpServletRequestWrapper;
 import org.apache.chemistry.opencmis.server.shared.ServiceCall;
 import org.apache.chemistry.opencmis.server.shared.TempStoreOutputStreamFactory;
-import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

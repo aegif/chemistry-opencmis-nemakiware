@@ -53,10 +53,6 @@ public final class OperationContextUtils {
      * Copies an OperationContext object.
      */
     public static OperationContext copyOperationContext(OperationContext context) {
-        if (context == null) {
-            throw new IllegalArgumentException("Invalid Operation Context!");
-        }
-
         return new OperationContextImpl(context);
     }
 
@@ -121,10 +117,6 @@ public final class OperationContextUtils {
      * {@code UnsupportedOperationException}.
      */
     public static OperationContext unmodifiableOperationContext(final OperationContext context) {
-        if (context == null) {
-            throw new IllegalArgumentException("Invalid Operation Context!");
-        }
-
         return new OperationContext() {
 
             private static final long serialVersionUID = 1L;

@@ -103,7 +103,6 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <version>2.4</version>
             <scope>provided</scope>
         </dependency>
         <!-- copy the dependencies from the server bindings here, because mvn eclipse ignores them from a .war -->

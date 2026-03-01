@@ -116,7 +116,9 @@
                                     </fileset>
                                 </copy>
 								
-                                <replace dir="${gendir}" token="javax.xml.ws.handler.HandlerResolver" value="org.apache.chemistry.opencmis.client.bindings.spi.HandlerResolver" />            
+                                <replace dir="${gendir}" token="javax.xml.ws.handler.HandlerResolver" value="org.apache.chemistry.opencmis.client.bindings.spi.HandlerResolver" />
+                                <replace dir="${gendir}" token="jakarta.xml.ws.handler.HandlerResolver" value="org.apache.chemistry.opencmis.client.bindings.spi.HandlerResolver" />
+                                <replace dir="${gendir}" token="jakarta.activation.MimetypesFileTypeMap" value="org.apache.chemistry.opencmis.commons.impl.MimetypesFileTypeMap" />
                             </target>
                         </configuration>
                         <goals>

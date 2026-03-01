@@ -124,8 +124,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compile.source>1.7</maven.compile.source>
-        <maven.compile.target>1.7</maven.compile.target>
+        <maven.compile.source>1.8</maven.compile.source>
+        <maven.compile.target>1.8</maven.compile.target>
+        <maven.compile.release>8</maven.compile.release>
         <docs.start.url>https://chemistry.apache.org/java/opencmis.html</docs.start.url>
         <docs.download.directory>${project.build.directory}/downloaded-site</docs.download.directory>
         <!--
@@ -380,8 +381,7 @@
                 <inherited>true</inherited>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <target>${maven.compile.target}</target>
-                    <source>${maven.compile.source}</source>
+                    <release>${maven.compile.release}</release>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>

@@ -60,8 +60,7 @@
                 <inherited>true</inherited>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <target>${maven.compile.target}</target>
-                    <source>${maven.compile.source}</source>
+                    <release>${maven.compile.release}</release>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>

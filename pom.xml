@@ -151,10 +151,12 @@
         <woodstox.version>4.4.1</woodstox.version>
         <osgi.version>5.0.0</osgi.version>
         <felix.plugin.version>3.3.0</felix.plugin.version>
-        <junit.version>4.12</junit.version>
-        <surefire.version>2.19.1</surefire.version>
-        <failsafe.version>2.19.1</failsafe.version>
-        <jacoco.version>0.7.5.201505241946</jacoco.version>
+        <junit.version>4.13.2</junit.version>
+        <surefire.version>3.2.5</surefire.version>
+        <failsafe.version>3.2.5</failsafe.version>
+        <jacoco.version>0.8.12</jacoco.version>
+        <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
+        <maven.enforcer.plugin.version>3.5.0</maven.enforcer.plugin.version>
         <slf4j.version>1.7.21</slf4j.version>
         <log4j.version>2.6.1</log4j.version>
         <apacheclient.version>4.2.6</apacheclient.version>
@@ -166,6 +168,7 @@
         <jakarta.jws.version>3.0.0</jakarta.jws.version>
         <jakarta.xml.bind.version>4.0.0</jakarta.xml.bind.version>
         <jakarta.activation.version>2.1.0</jakarta.activation.version>
+        <angus.activation.version>2.0.2</angus.activation.version>
         <jakarta.servlet.version>6.0.0</jakarta.servlet.version>
     </properties>
 
@@ -199,6 +202,13 @@
                 <version>${jakarta.activation.version}</version>
             </dependency>
             
+            <!-- Jakarta Activation implementation for Java 11+ runtime -->
+            <dependency>
+                <groupId>org.eclipse.angus</groupId>
+                <artifactId>angus-activation</artifactId>
+                <version>${angus.activation.version}</version>
+            </dependency>
+            
             <!-- Jakarta Servlet API -->
             <dependency>
                 <groupId>jakarta.servlet</groupId>
@@ -225,6 +235,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${failsafe.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -279,7 +294,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <version>1.4.1</version>
+                    <version>${maven.enforcer.plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

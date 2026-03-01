@@ -17,7 +17,10 @@ You can build OpenCMIS like this:
 
     mvn clean install
 
-You need Maven 3 with Java 8 (or higher) for the build.
+You need Maven 3 with Java 17 (or higher) for the build.
+
+This fork uses Java 17 as the baseline and validates build compatibility
+with both Java 17 and Java 21 in GitHub Actions.
 
 
 GitHub Packages (NemakiWare fork)

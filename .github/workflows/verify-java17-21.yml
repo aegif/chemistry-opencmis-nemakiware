@@ -30,13 +30,12 @@ jobs:
 
       - name: Build NemakiWare-required modules
         run: |
-          mvn -DskipTests \
-            -pl chemistry-opencmis-commons/chemistry-opencmis-commons-api,\
+          MODULES="chemistry-opencmis-commons/chemistry-opencmis-commons-api,\
 chemistry-opencmis-commons/chemistry-opencmis-commons-impl,\
 chemistry-opencmis-client/chemistry-opencmis-client-api,\
 chemistry-opencmis-client/chemistry-opencmis-client-bindings,\
 chemistry-opencmis-client/chemistry-opencmis-client-impl,\
 chemistry-opencmis-server/chemistry-opencmis-server-support,\
 chemistry-opencmis-server/chemistry-opencmis-server-bindings,\
-chemistry-opencmis-test/chemistry-opencmis-test-tck \
-            -am package
+chemistry-opencmis-test/chemistry-opencmis-test-tck"
+          mvn -DskipTests -pl "${MODULES}" -am package

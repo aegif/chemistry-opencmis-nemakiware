@@ -20,6 +20,45 @@ You can build OpenCMIS like this:
 You need Maven 3 with Java 8 (or higher) for the build.
 
 
+GitHub Packages (NemakiWare fork)
+=================================
+
+This fork can publish the jars required by NemakiWare to GitHub Packages
+without building WAR modules that fail on modern JDK module constraints.
+
+Required module deploy command:
+
+    ./scripts/deploy-required-jars.sh
+
+The script enables the `github-packages` Maven profile and deploys only:
+ - chemistry-opencmis-commons-api
+ - chemistry-opencmis-commons-impl
+ - chemistry-opencmis-client-api
+ - chemistry-opencmis-client-bindings
+ - chemistry-opencmis-client-impl
+ - chemistry-opencmis-server-support
+ - chemistry-opencmis-server-bindings
+ - chemistry-opencmis-test-tck
+
+Maven credentials are read from `~/.m2/settings.xml` server id `github`.
+Example:
+
+    <settings>
+      <servers>
+        <server>
+          <id>github</id>
+          <username>YOUR_GITHUB_USERNAME</username>
+          <password>YOUR_GITHUB_TOKEN</password>
+        </server>
+      </servers>
+    </settings>
+
+GitHub Actions workflow:
+ - `.github/workflows/publish-required-jars.yml`
+ - runs on `workflow_dispatch` or pushed `v*` tags
+ - uses `GITHUB_TOKEN` to deploy packages
+
+
 License (see also package specific LICENSE files)
 =================================================
 
@@ -54,4 +93,3 @@ are compatible with the Apache License.
 
 See LICENSE file included in all Apache Chemistry OpenCMIS packages for 
 full licensing details.
-

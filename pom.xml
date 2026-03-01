@@ -768,5 +768,25 @@
                 <additionalparam>-Xdoclint:accessibility -Xdoclint:html -Xdoclint:reference -Xdoclint:syntax</additionalparam>
             </properties>
         </profile>
+        <profile>
+            <id>github-packages</id>
+            <properties>
+                <github.packages.owner>aegif</github.packages.owner>
+                <github.packages.repo>chemistry-opencmis-nemakiware</github.packages.repo>
+                <github.packages.url>https://maven.pkg.github.com/${github.packages.owner}/${github.packages.repo}</github.packages.url>
+            </properties>
+            <distributionManagement>
+                <repository>
+                    <id>github</id>
+                    <name>GitHub Packages</name>
+                    <url>${github.packages.url}</url>
+                </repository>
+                <snapshotRepository>
+                    <id>github</id>
+                    <name>GitHub Packages</name>
+                    <url>${github.packages.url}</url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
     </profiles>
 </project>

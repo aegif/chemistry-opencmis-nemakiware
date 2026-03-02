@@ -37,3 +37,9 @@ jobs:
           mvn -f chemistry-opencmis-client/chemistry-opencmis-client-bindings/pom.xml \
             test \
             -Dopencmis.integration.tests.skip=true
+
+      - name: Run server-bindings compatibility smoke tests
+        run: |
+          mvn -f chemistry-opencmis-server/chemistry-opencmis-server-bindings/pom.xml \
+            test \
+            -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest

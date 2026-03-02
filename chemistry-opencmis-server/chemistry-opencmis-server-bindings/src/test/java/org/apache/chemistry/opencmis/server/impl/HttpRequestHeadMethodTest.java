@@ -18,7 +18,7 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,6 +46,7 @@ import org.apache.chemistry.opencmis.server.impl.atompub.AbstractAtomPubServiceC
 import org.apache.chemistry.opencmis.server.impl.atompub.CmisAtomPubServlet;
 import org.apache.chemistry.opencmis.server.impl.browser.CmisBrowserBindingServlet;
 import org.apache.chemistry.opencmis.server.shared.Dispatcher;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -78,16 +79,25 @@ public class HttpRequestHeadMethodTest {
     @Mock
     private ServletContext context;
 
+    private AutoCloseable mocks;
+
     @Before
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         when(this.request.getScheme()).thenReturn(BACKEND_SERVER_PROTO);
         when(this.request.getServerName()).thenReturn(BACKEND_SERVER_NAME);
         when(this.request.getServerPort()).thenReturn(BACKEND_SERVER_PORT);
         when(this.request.getContextPath()).thenReturn(CONTEXT_PATH);
         when(this.config.getServletContext()).thenReturn(context);
         when(this.context.getAttribute(CmisRepositoryContextListener.SERVICES_FACTORY)).thenReturn(cmisServiceFactory);
-        when(cmisServiceFactory.getService((CallContext) any())).thenReturn(cmisService);
+        when(cmisServiceFactory.getService(any(CallContext.class))).thenReturn(cmisService);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
     }
 
     @Test

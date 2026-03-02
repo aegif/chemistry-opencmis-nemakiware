@@ -32,6 +32,7 @@ import org.apache.chemistry.opencmis.commons.server.CallContext;
 import org.apache.chemistry.opencmis.commons.server.CmisService;
 import org.apache.chemistry.opencmis.server.filter.ProxyHttpServletRequestWrapper;
 import org.apache.chemistry.opencmis.server.impl.atompub.AbstractAtomPubServiceCall;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -56,15 +57,24 @@ public class ProxyRequestTest {
     @Mock
     private HttpServletRequest request;
 
+    private AutoCloseable mocks;
+
     @Before
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         when(this.request.getScheme()).thenReturn(BACKEND_SERVER_PROTO);
         when(this.request.getServerName()).thenReturn(BACKEND_SERVER_NAME);
         when(this.request.getServerPort()).thenReturn(BACKEND_SERVER_PORT);
         when(this.request.getContextPath()).thenReturn(CONTEXT_PATH);
         when(this.request.getServletPath()).thenReturn(SERVLET_PATH);
         when(this.request.getRequestURI()).thenReturn(CONTEXT_PATH + "/" + SERVLET_PATH);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
     }
 
     @Test

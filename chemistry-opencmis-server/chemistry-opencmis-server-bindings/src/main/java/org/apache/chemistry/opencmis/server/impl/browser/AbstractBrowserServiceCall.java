@@ -232,18 +232,9 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
     }
 
     public Properties createNewProperties(ControlParser controlParser, TypeCache typeCache) {
-        // Enhanced debug: Method entry tracking
-        System.out.println("ENHANCED DEBUG: createNewProperties() method called");
-        
         Map<String, List<String>> properties = controlParser.getProperties();
         if (properties == null) {
-            System.out.println("ENHANCED DEBUG: createNewProperties() - properties is null, returning null");
             return null;
-        }
-        
-        System.out.println("ENHANCED DEBUG: createNewProperties() - Found " + properties.size() + " properties");
-        for (Map.Entry<String, List<String>> prop : properties.entrySet()) {
-            System.out.println("ENHANCED DEBUG: createNewProperties() - Property: '" + prop.getKey() + "' = " + prop.getValue());
         }
 
         // load primary type
@@ -271,20 +262,10 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
         for (Map.Entry<String, List<String>> property : properties.entrySet()) {
             PropertyDefinition<?> propDef = typeCache.getPropertyDefinition(property.getKey());
             if (propDef == null) {
-                System.out.println("TCK FALLBACK: Property '" + property.getKey() + "' not found in typeCache, attempting fallback...");
-                
                 // FALLBACK PROCESSING: Try to get property definition from base types
                 propDef = attemptBaseTypeFallback(property.getKey(), objectTypeIdsValues, typeCache);
-                
                 if (propDef == null) {
-                    // CRITICAL ERROR: Debug unknown property issue for TCK tests
-                    System.err.println("CRITICAL: Unknown property key: '" + property.getKey() + "'");
-                    System.err.println("CRITICAL: Property value: " + property.getValue());
-                    System.err.println("CRITICAL: Available properties in typeCache - investigation required");
-                    
                     throw new CmisInvalidArgumentException(property.getKey() + " is unknown!");
-                } else {
-                    System.out.println("TCK FALLBACK: Successfully recovered property '" + property.getKey() + "' from base type fallback");
                 }
             }
 
@@ -299,22 +280,18 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
      * when not found in current TypeCache. This addresses TCK TypesTestGroup failures.
      */
     private PropertyDefinition<?> attemptBaseTypeFallback(String propertyId, List<String> objectTypeIdsValues, TypeCache typeCache) {
-        System.out.println("TCK FALLBACK: Attempting base type fallback for property: " + propertyId);
         
         // Strategy 1: Try to get property from specified objectTypeId's base type
         if (isNotEmpty(objectTypeIdsValues)) {
             String primaryTypeId = objectTypeIdsValues.get(0);
-            System.out.println("TCK FALLBACK: Primary type ID: " + primaryTypeId);
             
             // Determine base type from primary type
             String baseTypeId = determineBaseTypeId(primaryTypeId);
             if (baseTypeId != null) {
-                System.out.println("TCK FALLBACK: Determined base type: " + baseTypeId);
                 TypeDefinition baseType = typeCache.getTypeDefinition(baseTypeId);
                 if (baseType != null && baseType.getPropertyDefinitions() != null) {
                     PropertyDefinition<?> propDef = baseType.getPropertyDefinitions().get(propertyId);
                     if (propDef != null) {
-                        System.out.println("TCK FALLBACK: Found property '" + propertyId + "' in base type: " + baseTypeId);
                         return propDef;
                     }
                 }
@@ -324,18 +301,15 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
         // Strategy 2: Try all CMIS base types (last resort)
         String[] baseTypes = {"cmis:document", "cmis:folder", "cmis:relationship", "cmis:policy"};
         for (String baseTypeId : baseTypes) {
-            System.out.println("TCK FALLBACK: Trying base type: " + baseTypeId);
             TypeDefinition baseType = typeCache.getTypeDefinition(baseTypeId);
             if (baseType != null && baseType.getPropertyDefinitions() != null) {
                 PropertyDefinition<?> propDef = baseType.getPropertyDefinitions().get(propertyId);
                 if (propDef != null) {
-                    System.out.println("TCK FALLBACK: Found property '" + propertyId + "' in base type: " + baseTypeId);
                     return propDef;
                 }
             }
         }
         
-        System.out.println("TCK FALLBACK: Property '" + propertyId + "' not found in any base type");
         return null;
     }
     
@@ -363,27 +337,14 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
         }
         
         // Default fallback to document (most common)
-        System.out.println("TCK FALLBACK: Could not determine base type for '" + typeId + "', defaulting to cmis:document");
         return "cmis:document";
     }
 
     public Properties createUpdateProperties(ControlParser controlParser, String typeId, List<String> secondaryTypeIds,
             List<String> objectIds, TypeCache typeCache) {
-        // ENHANCED DEBUG: Method entry tracking
-        System.out.println("ENHANCED DEBUG: createUpdateProperties() method called");
-        System.out.println("ENHANCED DEBUG: createUpdateProperties() - typeId: " + typeId);
-        System.out.println("ENHANCED DEBUG: createUpdateProperties() - secondaryTypeIds: " + secondaryTypeIds);
-        System.out.println("ENHANCED DEBUG: createUpdateProperties() - objectIds: " + objectIds);
-        
         Map<String, List<String>> properties = controlParser.getProperties();
         if (properties == null) {
-            System.out.println("ENHANCED DEBUG: createUpdateProperties() - properties is null, returning null");
             return null;
-        }
-        
-        System.out.println("ENHANCED DEBUG: createUpdateProperties() - Found " + properties.size() + " properties");
-        for (Map.Entry<String, List<String>> prop : properties.entrySet()) {
-            System.out.println("ENHANCED DEBUG: createUpdateProperties() - Property: '" + prop.getKey() + "' = " + prop.getValue());
         }
 
         // load primary type
@@ -428,8 +389,6 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
                 }
             }
             if (propDef == null) {
-                System.out.println("TCK FALLBACK: createUpdateProperties() - Property '" + property.getKey() + "' not found, attempting comprehensive fallback...");
-                
                 // COMPREHENSIVE FALLBACK PROCESSING: Use same strategy as createNewProperties
                 List<String> typeIdList = null;
                 if (typeId != null) {
@@ -437,18 +396,8 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
                     typeIdList.add(typeId);
                 }
                 propDef = attemptBaseTypeFallback(property.getKey(), typeIdList, typeCache);
-                
                 if (propDef == null) {
-                    // CRITICAL STACK TRACE: Debug unknown property issue in createUpdateProperties
-                    System.out.println("CRITICAL STACK TRACE: createUpdateProperties() - Unknown property key: '" + property.getKey() + "'");
-                    System.out.println("CRITICAL STACK TRACE: createUpdateProperties() - Property value: " + property.getValue());
-                    System.out.println("CRITICAL STACK TRACE: createUpdateProperties() - typeId: " + typeId);
-                    System.out.println("CRITICAL STACK TRACE: createUpdateProperties() - secondaryTypeIds: " + secondaryTypeIds);
-                    System.out.println("CRITICAL STACK TRACE: createUpdateProperties() - objectIds: " + objectIds);
-                    
                     throw new CmisInvalidArgumentException(property.getKey() + " is unknown!");
-                } else {
-                    System.out.println("TCK FALLBACK: createUpdateProperties() - Successfully recovered property '" + property.getKey() + "' from comprehensive fallback");
                 }
             }
 
@@ -588,7 +537,6 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
         // FIRST: Check if ContentStream is available in request attribute (NemakiWare form-encoded fix)
         Object contentStreamAttr = request.getAttribute("org.apache.chemistry.opencmis.content.stream");
         if (contentStreamAttr instanceof ContentStream) {
-            System.out.println("OPENCMIS DEBUG: Found ContentStream in request attribute - using form-encoded ContentStream");
             ContentStream formContentStream = (ContentStream) contentStreamAttr;
             return formContentStream; // Return directly - it's already a ContentStream implementation
         }
@@ -597,14 +545,9 @@ public abstract class AbstractBrowserServiceCall extends AbstractServiceCall {
         if (request instanceof POSTHttpServletRequestWrapper) {
             POSTHttpServletRequestWrapper post = (POSTHttpServletRequestWrapper) request;
             if (post.getStream() != null) {
-                System.out.println("OPENCMIS DEBUG: Found ContentStream in POSTHttpServletRequestWrapper - using multipart ContentStream");
                 result = new ContentStreamImpl(post.getFilename(), post.getSize(), post.getContentType(),
                         post.getStream());
             }
-        }
-
-        if (result == null) {
-            System.out.println("OPENCMIS DEBUG: No ContentStream found - neither attribute nor POSTHttpServletRequestWrapper had content");
         }
 
         return result;

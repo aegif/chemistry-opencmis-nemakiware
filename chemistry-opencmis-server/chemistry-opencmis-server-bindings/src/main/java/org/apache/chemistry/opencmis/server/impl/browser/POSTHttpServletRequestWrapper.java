@@ -53,118 +53,41 @@ public final class POSTHttpServletRequestWrapper extends QueryStringHttpServletR
             throws IOException {
         super(request);
 
-        // MULTIPART DEBUG: Enhanced logging for multipart request processing
-        System.out.println("MULTIPART DEBUG: POSTHttpServletRequestWrapper constructor called");
-        System.out.println("MULTIPART DEBUG: Request URI: " + request.getRequestURI());
-        System.out.println("MULTIPART DEBUG: Request method: " + request.getMethod());
-        System.out.println("MULTIPART DEBUG: Content-Type: " + request.getContentType());
-        System.out.println("MULTIPART DEBUG: Content-Length: " + request.getContentLength());
-        
-        // CRITICAL DEBUG: Check InputStream state BEFORE MultipartParser
-        try {
-            System.out.println("MULTIPART DEBUG: Checking InputStream state before MultipartParser...");
-            InputStream inputStream = request.getInputStream();
-            int available = inputStream.available();
-            System.out.println("MULTIPART DEBUG: InputStream.available() = " + available + " bytes");
-            
-            // Check if this is a chunked request
-            String transferEncoding = request.getHeader("Transfer-Encoding");
-            String contentLength = request.getHeader("Content-Length");
-            System.out.println("MULTIPART DEBUG: Transfer-Encoding header: " + transferEncoding);
-            System.out.println("MULTIPART DEBUG: Content-Length header: " + contentLength);
-            
-            // Test if stream supports mark/reset
-            if (inputStream.markSupported()) {
-                System.out.println("MULTIPART DEBUG: InputStream supports mark/reset");
-                inputStream.mark(10);
-                int firstByte = inputStream.read();
-                inputStream.reset();
-                System.out.println("MULTIPART DEBUG: First byte peek: " + firstByte + " (stream intact after reset)");
-            } else {
-                System.out.println("MULTIPART DEBUG: InputStream does NOT support mark/reset - stream cannot be inspected without consuming");
+        if (MultipartParser.isMultipartContent(request)) {
+            MultipartParser parser = new MultipartParser(request, streamFactory);
+            parser.parse();
+
+            if (parser.hasContent()) {
+                filename = parser.getFilename();
+                contentType = parser.getContentType();
+                size = parser.getSize();
+                stream = parser.getStream();
             }
-        } catch (Exception e) {
-            System.out.println("MULTIPART DEBUG: ERROR checking InputStream state: " + e.getMessage());
-        }
-        
-        try {
-            if (MultipartParser.isMultipartContent(request)) {
-                System.out.println("MULTIPART DEBUG: Processing as multipart content");
-                // multipart processing
-                MultipartParser parser = new MultipartParser(request, streamFactory);
-                System.out.println("MULTIPART DEBUG: MultipartParser created successfully");
-                
-                System.out.println("MULTIPART DEBUG: Starting parser.parse()");
-                parser.parse();
-                System.out.println("MULTIPART DEBUG: parser.parse() completed successfully");
 
-                if (parser.hasContent()) {
-                    System.out.println("MULTIPART DEBUG: Parser has content - setting filename, contentType, size, stream");
-                    filename = parser.getFilename();
-                    contentType = parser.getContentType();
-                    size = parser.getSize();
-                    stream = parser.getStream();
-                    System.out.println("MULTIPART DEBUG: Content details - filename: " + filename + ", contentType: " + contentType + ", size: " + size);
-                } else {
-                    System.out.println("MULTIPART DEBUG: Parser has no content");
+            Map<String, String[]> parserFields = parser.getFields();
+            if (parserFields != null) {
+                for (Map.Entry<String, String[]> e : parserFields.entrySet()) {
+                    addParameter(e.getKey(), e.getValue());
                 }
-
-                System.out.println("MULTIPART DEBUG: Processing parser fields");
-                Map<String, String[]> parserFields = parser.getFields();
-                System.out.println("MULTIPART DEBUG: parser.getFields() returned " + (parserFields != null ? parserFields.size() : "null") + " fields");
-
-                if (parserFields != null) {
-                    for (Map.Entry<String, String[]> e : parserFields.entrySet()) {
-                        System.out.println("MULTIPART DEBUG: Adding parameter '" + e.getKey() + "' with " + e.getValue().length + " values");
-                        for (String value : e.getValue()) {
-                            System.out.println("MULTIPART DEBUG: Parameter '" + e.getKey() + "' value: '" + value + "'");
-                        }
-                        addParameter(e.getKey(), e.getValue());
-                    }
-                } else {
-                    System.out.println("MULTIPART DEBUG: WARNING - parser.getFields() returned null!");
-                }
-
-                // Debug: Check if parameters were actually added
-                System.out.println("MULTIPART DEBUG: After adding parser fields, parameters map size: " + parameters.size());
-                System.out.println("MULTIPART DEBUG: Parameters map content:");
-                for (Map.Entry<String, String[]> entry : parameters.entrySet()) {
-                    System.out.println("MULTIPART DEBUG:   '" + entry.getKey() + "' = " + java.util.Arrays.toString(entry.getValue()));
-                }
-
-                String filenameControl = HttpUtils.getStringParameter(this, Constants.CONTROL_FILENAME);
-                if (filenameControl != null && filenameControl.trim().length() > 0) {
-                    System.out.println("MULTIPART DEBUG: Overriding filename from control parameter: " + filenameControl);
-                    filename = filenameControl;
-                }
-
-                String contentTypeControl = HttpUtils.getStringParameter(this, Constants.CONTROL_CONTENT_TYPE);
-                if (contentTypeControl != null && contentTypeControl.trim().length() > 0) {
-                    System.out.println("MULTIPART DEBUG: Overriding contentType from control parameter: " + contentTypeControl);
-                    contentType = contentTypeControl;
-                }
-                
-                System.out.println("MULTIPART DEBUG: Multipart processing completed successfully");
-                
-            } else if (isFormUrlencodedContent(request)) {
-                System.out.println("MULTIPART DEBUG: Processing as form-urlencoded content");
-                // form data processing
-                if (!parseFormUrlEncodedData(request)) {
-                    parameters.putAll(request.getParameterMap());
-                }
-            } else {
-                System.out.println("MULTIPART DEBUG: ERROR - Neither multipart nor form-urlencoded content");
-                System.out.println("MULTIPART DEBUG: Content-Type: " + request.getContentType());
-                // spec incompliant form encoding
-                throw new CmisInvalidArgumentException("Invalid form encoding!");
             }
-        } catch (Exception e) {
-            System.out.println("MULTIPART DEBUG: EXCEPTION in POSTHttpServletRequestWrapper constructor: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            if (e.getCause() != null) {
-                System.out.println("MULTIPART DEBUG: EXCEPTION cause: " + e.getCause().getClass().getSimpleName() + ": " + e.getCause().getMessage());
+
+            String filenameControl = HttpUtils.getStringParameter(this, Constants.CONTROL_FILENAME);
+            if (filenameControl != null && filenameControl.trim().length() > 0) {
+                filename = filenameControl;
             }
-            e.printStackTrace();
-            throw e;
+
+            String contentTypeControl = HttpUtils.getStringParameter(this, Constants.CONTROL_CONTENT_TYPE);
+            if (contentTypeControl != null && contentTypeControl.trim().length() > 0) {
+                contentType = contentTypeControl;
+            }
+        } else if (isFormUrlencodedContent(request)) {
+            // form data processing
+            if (!parseFormUrlEncodedData(request)) {
+                parameters.putAll(request.getParameterMap());
+            }
+        } else {
+            // spec incompliant form encoding
+            throw new CmisInvalidArgumentException("Invalid form encoding!");
         }
     }
 

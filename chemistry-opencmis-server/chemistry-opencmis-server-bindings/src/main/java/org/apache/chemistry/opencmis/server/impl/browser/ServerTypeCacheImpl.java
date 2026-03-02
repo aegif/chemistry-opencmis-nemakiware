@@ -118,7 +118,7 @@ public class ServerTypeCacheImpl implements TypeCache {
         for (TypeDefinition typeDef : typeDefinitions.values()) {
             PropertyDefinition<?> propDef = typeDef.getPropertyDefinitions().get(propId);
             if (propDef != null) {
-                System.out.println("DEBUG: Found property " + propId + " in cached type " + typeDef.getId());
+                log.debug("Found property {} in cached type {}", propId, typeDef.getId());
                 return propDef;
             }
         }
@@ -298,7 +298,7 @@ public class ServerTypeCacheImpl implements TypeCache {
                         Cardinality.SINGLE, Updatability.READWRITE, false, false, false);
                         
             default:
-                System.out.println("DEBUG: Unknown standard CMIS property " + propId + " - returning null");
+                log.debug("Unknown standard CMIS property {} - returning null", propId);
                 return null;
         }
     }

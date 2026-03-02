@@ -67,6 +67,7 @@
                             org.apache.chemistry.opencmis.client.api.*;version=${project.version},
                             org.apache.chemistry.opencmis.client.util.*;version=${project.version},
                             org.apache.chemistry.opencmis.client.bindings;version=${project.version},
+                            org.apache.chemistry.opencmis.client.bindings.cache;version=${project.version},
                             org.apache.chemistry.opencmis.client.bindings.spi.*;version=${project.version},
                             org.apache.chemistry.opencmis.commons.impl.*;version=${project.version};-noimport:=true,
                             org.apache.chemistry.opencmis.commons.*;version=${project.version};-noimport:=true

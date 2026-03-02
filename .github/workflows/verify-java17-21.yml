@@ -30,7 +30,7 @@ jobs:
 
       - name: Build full reactor (skip tests)
         run: |
-          mvn -DskipTests package
+          mvn -DskipTests install
 
       - name: Run client-bindings unit tests
         run: |

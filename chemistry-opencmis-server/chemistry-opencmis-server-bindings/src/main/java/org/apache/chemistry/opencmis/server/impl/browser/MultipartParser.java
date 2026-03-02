@@ -103,25 +103,7 @@ public class MultipartParser {
         fields = new HashMap<String, String[]>();
         rawFields = new HashMap<String, byte[][]>();
 
-        // JAKARTA EE FIX: Check if multipart was already processed by container
-        boolean streamConsumed = false;
-        try {
-            int available = requestStream.available();
-            if (available == 0 && request.getContentLength() > 0) {
-                // Stream consumed but content was present - likely processed by Tomcat
-                System.out.println("MULTIPART FIX: Stream consumed by container (Content-Length=" +
-                                  request.getContentLength() + " but available=" + available +
-                                  "), will use Parts API in parse()");
-                streamConsumed = true;
-                eof = true;
-            }
-        } catch (Exception e) {
-            System.out.println("MULTIPART FIX: Error checking stream: " + e.getMessage());
-        }
-
-        if (!streamConsumed) {
-            skipPreamble();
-        }
+        skipPreamble();
     }
 
     private void addField(String name, String value) {
@@ -156,7 +138,6 @@ public class MultipartParser {
 
         // parse content type and extract boundary
         byte[] extractedBoundary = MimeHelper.getBoundaryFromMultiPart(requestContentType);
-        
         if (extractedBoundary == null) {
             throw new CmisInvalidArgumentException("Invalid multipart request!");
         }
@@ -475,12 +456,8 @@ public class MultipartParser {
 
         Map<String, String> params = new HashMap<String, String>();
         MimeHelper.decodeContentDisposition(contentDisposition, params);
-        
-        // CRITICAL FIX: Recognize ContentStream by field name "content" even without filename parameter
-        // This fixes Browser Binding document creation when filename is not provided in Content-Disposition header
         String fieldName = params.get(MimeHelper.DISPOSITION_NAME);
-        boolean hasFilename = params.containsKey(MimeHelper.DISPOSITION_FILENAME);
-        boolean isContent = hasFilename || "content".equals(fieldName);
+        boolean isContent = params.containsKey(MimeHelper.DISPOSITION_FILENAME) || "content".equals(fieldName);
 
         if (isContent) {
             if (hasContent) {
@@ -535,53 +512,7 @@ public class MultipartParser {
     }
 
     private void skipPreamble() throws IOException {
-        // Note: Stream consumption check is now done in constructor
         readBuffer();
-
-        // COMPREHENSIVE FIX: Handle chunked transfer encoding and EOF issues
-        // With chunked encoding, initial buffer might not have enough bytes
-        // Force reading even if EOF flag is set prematurely
-        int readAttempts = 0;
-        while (bufferCount < boundary.length - 2 && readAttempts < 10) {
-            int prevBufferCount = bufferCount;
-
-            // CRITICAL: Force reading even if EOF flag is set - chunked encoding issue
-
-            // Direct stream reading bypassing EOF check
-            if (!eof || (eof && bufferCount == 0)) {
-                try {
-                    int r = requestStream.read(buffer, bufferCount, buffer.length - bufferCount);
-                    if (r > 0) {
-                        bufferCount += r;
-                        eof = false; // Reset EOF if we got data
-                    } else if (r == -1) {
-                        eof = true;
-                    }
-                } catch (IOException e) {
-                    eof = true;
-                }
-            } else {
-                readBuffer();
-            }
-
-            readAttempts++;
-
-            // If buffer didn't grow after multiple attempts, break
-            if (bufferCount == prevBufferCount) {
-                break;
-            }
-        }
-
-        // JAKARTA EE FIX: Check if stream was already consumed by container
-        if (bufferCount == 0) {
-            // Check if parameters are available via request.getParameter()
-            String testParam = request.getParameter("cmisaction");
-            if (testParam != null) {
-                System.out.println("MULTIPART FIX: Stream consumed but parameters available - container processed multipart");
-                // Don't throw exception - parameters are available via getParameter()
-                return;
-            }
-        }
 
         if (bufferCount < boundary.length - 2) {
             throw new CmisInvalidArgumentException("Invalid multipart request!");
@@ -640,159 +571,24 @@ public class MultipartParser {
                 return false;
             }
 
-
             readBody();
 
             return true;
         } catch (IOException e) {
-            e.printStackTrace();
-            
             IOUtils.closeQuietly(contentStream);
 
             skipEpilogue();
 
-            throw e;
-        } catch (Exception e) {
-            e.printStackTrace();
-            
-            IOUtils.closeQuietly(contentStream);
-            skipEpilogue();
             throw e;
         }
     }
 
     public void parse() throws IOException {
-        // JAKARTA EE / TOMCAT 10 FIX: Try Parts API first, fallback to stream parsing
-        boolean partsApiSuccess = false;
-
-        // Try to use Parts API if Tomcat has already processed multipart
         try {
-            // If eof is already true (set in constructor), immediately use Parts API
-            if (eof) {
-                System.out.println("MULTIPART FIX: EOF already set in constructor - stream was consumed by container");
-                System.out.println("MULTIPART FIX: Using Parts API to retrieve multipart data");
-
-                java.util.Collection<jakarta.servlet.http.Part> parts = request.getParts();
-                if (parts != null && !parts.isEmpty()) {
-                    System.out.println("MULTIPART FIX: Found " + parts.size() + " parts via Parts API");
-
-                    // Process all parts
-                    for (jakarta.servlet.http.Part part : parts) {
-                        String partName = part.getName();
-                        System.out.println("MULTIPART FIX: Processing part '" + partName + "'");
-
-                        if ("content".equals(partName)) {
-                            // File content part
-                            filename = part.getSubmittedFileName();
-                            contentType = part.getContentType();
-
-                            // CRITICAL TCK FIX: Part.getSize() may return 0 if Content-Length header is not present
-                            // In that case, read the InputStream to calculate actual size
-                            long partSize = part.getSize();
-                            System.out.println("MULTIPART DEBUG: Part.getSize() returned: " + partSize);
-
-                            if (partSize > 0) {
-                                contentSize = java.math.BigInteger.valueOf(partSize);
-                                contentStream = part.getInputStream();
-                                System.out.println("MULTIPART DEBUG: Using Part.getSize() value: " + partSize);
-                            } else {
-                                // Read InputStream into ByteArrayOutputStream to calculate size
-                                System.out.println("MULTIPART DEBUG: Part.getSize()=0, attempting to read InputStream...");
-                                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                                java.io.InputStream partStream = part.getInputStream();
-                                System.out.println("MULTIPART DEBUG: InputStream obtained, class: " + partStream.getClass().getName());
-
-                                try {
-                                    int available = partStream.available();
-                                    System.out.println("MULTIPART DEBUG: InputStream.available() = " + available);
-                                } catch (Exception e) {
-                                    System.out.println("MULTIPART DEBUG: InputStream.available() threw exception: " + e.getMessage());
-                                }
-
-                                try {
-                                    byte[] buffer = new byte[8192];
-                                    int bytesRead;
-                                    int totalBytesRead = 0;
-                                    int readCount = 0;
-                                    while ((bytesRead = partStream.read(buffer)) != -1) {
-                                        readCount++;
-                                        totalBytesRead += bytesRead;
-                                        baos.write(buffer, 0, bytesRead);
-                                        System.out.println("MULTIPART DEBUG: Read iteration " + readCount + ": " + bytesRead + " bytes (total: " + totalBytesRead + ")");
-                                    }
-                                    System.out.println("MULTIPART DEBUG: InputStream read complete, total bytes: " + totalBytesRead);
-                                } finally {
-                                    partStream.close();
-                                }
-
-                                byte[] contentBytes = baos.toByteArray();
-                                contentSize = java.math.BigInteger.valueOf(contentBytes.length);
-                                contentStream = new java.io.ByteArrayInputStream(contentBytes);
-                                System.out.println("MULTIPART FIX: Calculated actual size from InputStream: " + contentSize + " bytes");
-                            }
-
-                            hasContent = true;
-                            System.out.println("MULTIPART FIX: Found content part - filename: " + filename + ", type: " + contentType + ", size: " + contentSize);
-                        } else {
-                            // Form field part
-                            try (java.io.InputStream partStream = part.getInputStream()) {
-                                // Read the stream into a byte array
-                                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                                byte[] buffer = new byte[1024];
-                                int bytesRead;
-                                while ((bytesRead = partStream.read(buffer)) != -1) {
-                                    baos.write(buffer, 0, bytesRead);
-                                }
-                                String value = new String(baos.toByteArray(), "UTF-8");
-                                addField(partName, value);
-                                System.out.println("MULTIPART FIX: Added field '" + partName + "' = '" + value + "'");
-                            }
-                        }
-                    }
-
-                    // Also get any regular form parameters
-                    java.util.Map<String, String[]> paramMap = request.getParameterMap();
-                    for (java.util.Map.Entry<String, String[]> entry : paramMap.entrySet()) {
-                        if (!fields.containsKey(entry.getKey())) {
-                            fields.put(entry.getKey(), entry.getValue());
-                            System.out.println("MULTIPART FIX: Added parameter '" + entry.getKey() + "' with " + entry.getValue().length + " values");
-                        }
-                    }
-
-                    partsApiSuccess = true;
-                    System.out.println("MULTIPART FIX: Successfully processed multipart via Parts API");
-                    System.out.println("MULTIPART FIX: Final fields map size: " + fields.size());
-                    System.out.println("MULTIPART FIX: Final fields content:");
-                    for (Map.Entry<String, String[]> entry : fields.entrySet()) {
-                        System.out.println("MULTIPART FIX:   '" + entry.getKey() + "' = " + java.util.Arrays.toString(entry.getValue()));
-                    }
-                    return;
-                }
-            }
-        } catch (jakarta.servlet.ServletException e) {
-            System.out.println("MULTIPART FIX: Parts API failed with ServletException: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("MULTIPART FIX: Parts API failed with exception: " + e.getClass().getName() + ": " + e.getMessage());
-        }
-
-        // If Parts API failed or stream is available, use traditional parsing
-        if (!partsApiSuccess) {
-            // JAKARTA EE FIX: If stream was consumed but Parts API failed, we can't proceed
-            if (eof) {
-                System.out.println("MULTIPART FIX: ERROR - Stream consumed by container but Parts API failed");
-                throw new CmisInvalidArgumentException("Multipart stream was consumed by container but Parts API failed to retrieve data");
-            }
-            System.out.println("MULTIPART FIX: Falling back to traditional stream parsing");
-        }
-
-        try {
-            int partCount = 0;
 
             while (readNext()) {
-                partCount++;
                 // nothing to do here, just read
             }
-
 
             // apply charset
             for (Map.Entry<String, byte[][]> e : rawFields.entrySet()) {
@@ -812,9 +608,7 @@ public class MultipartParser {
 
                 fields.put(e.getKey(), values);
             }
-            
         } catch (Exception e) {
-            
             if (contentStream != null) {
                 IOUtils.closeQuietly(contentStream);
             }
@@ -858,13 +652,6 @@ public class MultipartParser {
     }
 
     public Map<String, String[]> getFields() {
-        System.out.println("MULTIPART FIX: getFields() called, returning map with " + (fields != null ? fields.size() : "null") + " entries");
-        if (fields != null && fields.size() > 0) {
-            System.out.println("MULTIPART FIX: getFields() content:");
-            for (Map.Entry<String, String[]> entry : fields.entrySet()) {
-                System.out.println("MULTIPART FIX:   '" + entry.getKey() + "' = " + java.util.Arrays.toString(entry.getValue()));
-            }
-        }
         return fields;
     }
 

@@ -71,6 +71,9 @@
                             org.apache.chemistry.opencmis.commons.impl.*;version=${project.version};-noimport:=true,
                             org.apache.chemistry.opencmis.commons.*;version=${project.version};-noimport:=true
                         </_exportcontents>
+                        <_fixupmessages>
+                            Classes found in the wrong directory: \{META-INF/versions/9/module-info.class=module-info\};is:=ignore
+                        </_fixupmessages>
                         <Bundle-DocURL>${project.url}</Bundle-DocURL>
                         <Bundle-Activator>org.apache.chemistry.opencmis.client.osgi.Activator</Bundle-Activator>
                     </instructions>

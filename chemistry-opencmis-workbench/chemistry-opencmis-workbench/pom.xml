@@ -83,7 +83,6 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <configuration>
                     <encoding>UTF-8</encoding>
-                    <filtering>false</filtering>
                 </configuration>
             </plugin>
             <plugin>

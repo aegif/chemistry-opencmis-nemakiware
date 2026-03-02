@@ -28,17 +28,9 @@ jobs:
           java-version: ${{ matrix.java-version }}
           cache: maven
 
-      - name: Build NemakiWare-required modules
+      - name: Build full reactor (skip tests)
         run: |
-          MODULES="chemistry-opencmis-commons/chemistry-opencmis-commons-api,\
-chemistry-opencmis-commons/chemistry-opencmis-commons-impl,\
-chemistry-opencmis-client/chemistry-opencmis-client-api,\
-chemistry-opencmis-client/chemistry-opencmis-client-bindings,\
-chemistry-opencmis-client/chemistry-opencmis-client-impl,\
-chemistry-opencmis-server/chemistry-opencmis-server-support,\
-chemistry-opencmis-server/chemistry-opencmis-server-bindings,\
-chemistry-opencmis-test/chemistry-opencmis-test-tck"
-          mvn -DskipTests -pl "${MODULES}" -am package
+          mvn -DskipTests package
 
       - name: Run client-bindings unit tests
         run: |

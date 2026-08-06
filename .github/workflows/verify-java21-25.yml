@@ -33,22 +33,13 @@ jobs:
           mvn -DskipTests install
 
       - name: Run required-module unit tests
-        run: |
-          mvn -pl \
-            chemistry-opencmis-commons/chemistry-opencmis-commons-api,\
-            chemistry-opencmis-commons/chemistry-opencmis-commons-impl,\
-            chemistry-opencmis-client/chemistry-opencmis-client-api,\
-            chemistry-opencmis-client/chemistry-opencmis-client-bindings,\
-            chemistry-opencmis-client/chemistry-opencmis-client-impl,\
-            chemistry-opencmis-server/chemistry-opencmis-server-support,\
-            chemistry-opencmis-server/chemistry-opencmis-server-bindings,\
-            chemistry-opencmis-test/chemistry-opencmis-test-tck \
-            -am \
-            test \
-            -Dopencmis.integration.tests.skip=true
+        run: >
+          mvn -pl
+          chemistry-opencmis-commons/chemistry-opencmis-commons-api,chemistry-opencmis-commons/chemistry-opencmis-commons-impl,chemistry-opencmis-client/chemistry-opencmis-client-api,chemistry-opencmis-client/chemistry-opencmis-client-bindings,chemistry-opencmis-client/chemistry-opencmis-client-impl,chemistry-opencmis-server/chemistry-opencmis-server-support,chemistry-opencmis-server/chemistry-opencmis-server-bindings,chemistry-opencmis-test/chemistry-opencmis-test-tck
+          -am test -Dopencmis.integration.tests.skip=true
 
       - name: Run server-bindings compatibility smoke tests
-        run: |
-          mvn -f chemistry-opencmis-server/chemistry-opencmis-server-bindings/pom.xml \
-            test \
-            -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest,MultipartParserTest
+        run: >
+          mvn -f chemistry-opencmis-server/chemistry-opencmis-server-bindings/pom.xml
+          test
+          -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest,MultipartParserTest

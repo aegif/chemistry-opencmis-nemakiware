@@ -32,7 +32,7 @@
     <groupId>org.apache.chemistry.opencmis</groupId>
     <artifactId>chemistry-opencmis</artifactId>
     <name>Apache Chemistry OpenCMIS</name>
-    <version>1.1.4-nemakiware</version>
+    <version>1.1.5-nemakiware</version>
     <packaging>pom</packaging>
 
     <organization>
@@ -152,7 +152,6 @@
         <woodstox.version>7.1.1</woodstox.version>
         <osgi.version>5.0.0</osgi.version>
         <felix.plugin.version>5.1.9</felix.plugin.version>
-        <junit.version>4.13.2</junit.version>
         <junit.jupiter.version>5.14.4</junit.jupiter.version>
         <surefire.version>3.5.4</surefire.version>
         <failsafe.version>3.5.4</failsafe.version>
@@ -564,14 +563,6 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- junit:junit remains for chemistry-opencmis-test-tck main sources (TCK API). -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
-            <type>jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>

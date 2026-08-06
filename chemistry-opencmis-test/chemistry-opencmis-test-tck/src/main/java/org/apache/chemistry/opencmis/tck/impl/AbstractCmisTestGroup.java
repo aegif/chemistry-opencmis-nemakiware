@@ -25,7 +25,7 @@ import java.util.Map;
 import org.apache.chemistry.opencmis.tck.CmisTest;
 import org.apache.chemistry.opencmis.tck.CmisTestGroup;
 import org.apache.chemistry.opencmis.tck.CmisTestProgressMonitor;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Base class for test groups.

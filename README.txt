@@ -82,10 +82,23 @@ Compared with phase 4 (`1.1.3-nemakiware`):
    JUnit Jupiter 5.14.4 (`@Test`, `@BeforeEach` / `@AfterEach`,
    `Assertions` / `Assumptions`, `assertThrows`)
  - `junit-vintage-engine` removed from the parent test classpath
- - `junit:junit` remains for `chemistry-opencmis-test-tck` main sources
-   (TCK runner API still exposes JUnit 4 annotations)
+ - `junit:junit` remained briefly for TCK main sources (removed in
+   phase 6)
 
 NemakiWare consumption remains out of scope for phase 5.
+
+Phase 6 modernization notes (1.1.5-nemakiware)
+==============================================
+
+Compared with phase 5 (`1.1.4-nemakiware`):
+
+ - Artifact version: `1.1.5-nemakiware`
+ - TCK main (`AbstractCmisTest`, `AbstractCmisTestGroup`,
+   `JUnitHelper`) switched from JUnit 4 to JUnit Jupiter API
+ - Parent test-scoped `junit:junit` removed; TCK depends on
+   `junit-jupiter-api` instead
+
+NemakiWare consumption remains out of scope for phase 6.
 
 Client-Bindings Integration Tests
 =================================

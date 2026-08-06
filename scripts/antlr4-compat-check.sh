@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Run ANTLR4 query compatibility gates (golden AST + semantic snapshots).
-# Optional: compare Strict AST expectations against the ANTLR3-era TestParserStrict
-# assertions still present in git history (baseline commit).
+# Also cross-checks the Strict AST corpus against TestParserStrict
+# expected strings in the current tree.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-BASE_REF="${1:-7fade96e}"
 JAVA_HOME="${JAVA_HOME:-}"
 if [[ -z "${JAVA_HOME}" && -d "${HOME}/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.10+7/Contents/Home" ]]; then
   export JAVA_HOME="${HOME}/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.10+7/Contents/Home"
@@ -71,9 +70,6 @@ if mismatched:
         print(" ", m)
     sys.exit(1)
 print("OK: golden corpus matches TestParserStrict expected ASTs")
-print("Note: optional baseline ref arg is reserved for future worktree shadow runs;")
-print("      a few ANTLR3-era asserts in older commits had typos and were corrected")
-print("      when freezing this corpus.")
 PY
 
 echo "==> Compatibility gates passed"

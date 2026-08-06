@@ -44,6 +44,14 @@ jobs:
           test
           -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest,MultipartParserTest
 
+      - name: Run query compatibility gates
+        run: >
+          mvn -pl
+          chemistry-opencmis-server/chemistry-opencmis-server-support,chemistry-opencmis-server/chemistry-opencmis-server-inmemory
+          -am test
+          -Dtest=QueryAstCorpusTest,QuerySemanticSnapshotTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+
       - name: Package Workbench
         run: >
           mvn -pl chemistry-opencmis-workbench/chemistry-opencmis-workbench

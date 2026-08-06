@@ -33,8 +33,9 @@ Compared with phase 1 (`1.1.0-nemakiware` / Java 17 baseline):
  - CI matrix: Java 21 and Java 25
  - Woodstox: `com.fasterxml.woodstox:woodstox-core:7.1.1`
    (replaces `org.codehaus.woodstox:woodstox-core-asl:4.4.1`)
- - Apache HttpClient: `4.5.14` (from `4.2.6`; HttpClient 5.x deferred)
- - OkHttp: `4.12.0` (from `3.4.1`)
+ - Apache HttpClient: `4.5.14` (from `4.2.6`; migrated to HttpClient
+   5.x in phase 3)
+ - OkHttp: `4.12.0` (from `3.4.1`; later OkHttp 5 in phase 4)
  - SLF4J: `2.0.17`
 
 NemakiWare consumption of this artifact is intentionally out of scope
@@ -110,6 +111,15 @@ Compared with phase 5 (`1.1.4-nemakiware`):
    `query-compat/*.corpus`, `QueryAstCorpusTest`,
    `QuerySemanticSnapshotTest`, and `scripts/antlr4-compat-check.sh`
  - OSGi Core `org.osgi.core` 6.0.0; Felix `maven-bundle-plugin` 6.0.2
+ - Android StAX sharing via Woodstox (XmlPull / kxml2 forks removed)
+ - Maintenance (still `1.1.5-nemakiware`; no micro-bump):
+   - CI (`verify-java21-25.yml`) runs `QueryAstCorpusTest` and
+     `QuerySemanticSnapshotTest`; local entry point remains
+     `./scripts/antlr4-compat-check.sh`
+   - Jacoco `0.8.15`, Mockito `5.23.0`, Log4j `2.25.5`
+   - Removed one-shot helper scripts
+     (`convert-servlet-imports.sh`, `update-servlet-dependencies.sh`,
+     `scripts/migrate-junit4-to-jupiter.py`)
 
 HTTP invokers:
 
@@ -124,13 +134,13 @@ Explicitly deferred (follow-up phases):
 
  - NemakiWare Packages / `lib/built-jars` intake
 
-Android client (done in this phase beyond the earlier deferral note):
+Android client (phase 6):
 
  - Removed `com.google.android:android` stub
  - `--release 11` for the android module
  - StAX sharing: desktop `XMLConverter` / `XMLUtils` / AtomPub SPI are
-   copied into the android fat client; Woodstox replaces kxml2/XmlPull
-   forks so AtomPub stays in sync with the desktop client
+   copied into the android fat client; Woodstox replaces former
+   kxml2/XmlPull forks so AtomPub stays in sync with the desktop client
 
 NemakiWare consumption remains out of scope for phase 6.
 

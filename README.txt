@@ -17,10 +17,28 @@ You can build OpenCMIS like this:
 
     mvn clean install
 
-You need Maven 3 with Java 17 (or higher) for the build.
+You need Maven 3 with Java 21 (or higher) for the build.
 
-This fork uses Java 17 as the baseline and validates build compatibility
-with both Java 17 and Java 21 in GitHub Actions.
+This fork uses Java 21 as the baseline (`--release 21`) and validates
+build compatibility with both Java 21 and Java 25 in GitHub Actions.
+
+Phase 2 modernization notes (1.1.1-nemakiware)
+==============================================
+
+Compared with phase 1 (`1.1.0-nemakiware` / Java 17 baseline):
+
+ - Artifact version: `1.1.1-nemakiware` (distinguishable from published
+   `1.1.0-nemakiware` packages)
+ - Compile / release target: Java 21
+ - CI matrix: Java 21 and Java 25
+ - Woodstox: `com.fasterxml.woodstox:woodstox-core:7.1.1`
+   (replaces `org.codehaus.woodstox:woodstox-core-asl:4.4.1`)
+ - Apache HttpClient: `4.5.14` (from `4.2.6`; HttpClient 5.x deferred)
+ - OkHttp: `4.12.0` (from `3.4.1`)
+ - SLF4J: `2.0.17`
+
+NemakiWare consumption of this artifact is intentionally out of scope
+for phase 2; publish via `./scripts/deploy-required-jars.sh` when ready.
 
 Client-Bindings Integration Tests
 =================================

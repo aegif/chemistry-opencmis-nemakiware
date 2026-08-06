@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.1.0-nemakiware</version>
+        <version>1.1.1-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     
@@ -45,15 +45,9 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.codehaus.woodstox</groupId>
-            <artifactId>woodstox-core-asl</artifactId>
+            <groupId>com.fasterxml.woodstox</groupId>
+            <artifactId>woodstox-core</artifactId>
             <version>${woodstox.version}</version>
-            <exclusions>
-                <exclusion> <!-- included in Java 6 and above -->
-                    <groupId>javax.xml.stream</groupId>
-                    <artifactId>stax-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <!-- Test -->
         <dependency>

@@ -1,0 +1,54 @@
+name: Verify Java 21 and 25 Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+      - "codex/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: ["21", "25"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: maven
+
+      - name: Build full reactor (skip tests)
+        run: |
+          mvn -DskipTests install
+
+      - name: Run required-module unit tests
+        run: |
+          mvn -pl \
+            chemistry-opencmis-commons/chemistry-opencmis-commons-api,\
+            chemistry-opencmis-commons/chemistry-opencmis-commons-impl,\
+            chemistry-opencmis-client/chemistry-opencmis-client-api,\
+            chemistry-opencmis-client/chemistry-opencmis-client-bindings,\
+            chemistry-opencmis-client/chemistry-opencmis-client-impl,\
+            chemistry-opencmis-server/chemistry-opencmis-server-support,\
+            chemistry-opencmis-server/chemistry-opencmis-server-bindings,\
+            chemistry-opencmis-test/chemistry-opencmis-test-tck \
+            -am \
+            test \
+            -Dopencmis.integration.tests.skip=true
+
+      - name: Run server-bindings compatibility smoke tests
+        run: |
+          mvn -f chemistry-opencmis-server/chemistry-opencmis-server-bindings/pom.xml \
+            test \
+            -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest,MultipartParserTest

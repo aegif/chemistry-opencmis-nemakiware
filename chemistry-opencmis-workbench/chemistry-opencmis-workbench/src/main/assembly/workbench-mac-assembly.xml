@@ -99,6 +99,7 @@
             <useTransitiveFiltering>true</useTransitiveFiltering>
             <excludes>
                 <exclude>org.codehaus.woodstox:wstx-asl:*</exclude>
+                <exclude>com.fasterxml.woodstox:woodstox-core:*</exclude>
             </excludes>
         </dependencySet>
     </dependencySets>

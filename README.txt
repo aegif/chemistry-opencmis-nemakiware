@@ -40,6 +40,19 @@ Compared with phase 1 (`1.1.0-nemakiware` / Java 17 baseline):
 NemakiWare consumption of this artifact is intentionally out of scope
 for phase 2; publish via `./scripts/deploy-required-jars.sh` when ready.
 
+Phase 3 modernization notes (1.1.2-nemakiware)
+==============================================
+
+Compared with phase 2 (`1.1.1-nemakiware`):
+
+ - Artifact version: `1.1.2-nemakiware`
+ - Apache HttpClient: `org.apache.httpcomponents.client5:httpclient5:5.5.1`
+   (replaces HttpClient 4.5.14 / `org.apache.httpcomponents:httpclient`)
+ - Session parameter class name `ApacheClientHttpInvoker` is unchanged
+ - Default HTTP invoker remains JDK `DefaultHttpInvoker`
+
+NemakiWare consumption remains out of scope for phase 3.
+
 Client-Bindings Integration Tests
 =================================
 

@@ -43,27 +43,22 @@ import org.apache.chemistry.opencmis.client.bindings.spi.BindingSession;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
-import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
 import org.apache.chemistry.opencmis.commons.spi.AuthenticationProvider;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.conn.ssl.X509HostnameVerifier;
-import org.apache.http.entity.AbstractHttpEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.http.params.HttpProtocolParams;
+import org.apache.hc.client5.http.classic.methods.HttpDelete;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.cookie.StandardCookieSpec;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
+import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,11 +109,11 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             }
 
             // get HTTP client object from session
-            DefaultHttpClient httpclient = (DefaultHttpClient) session.get(HTTP_CLIENT);
+            CloseableHttpClient httpclient = (CloseableHttpClient) session.get(HTTP_CLIENT);
             if (httpclient == null) {
                 session.writeLock();
                 try {
-                    httpclient = (DefaultHttpClient) session.get(HTTP_CLIENT);
+                    httpclient = (CloseableHttpClient) session.get(HTTP_CLIENT);
                     if (httpclient == null) {
                         httpclient = createHttpClient(url, session);
                         session.put(HTTP_CLIENT, httpclient, true);
@@ -128,7 +123,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 }
             }
 
-            HttpRequestBase request = null;
+            HttpUriRequestBase request;
 
             if ("GET".equals(method)) {
                 request = new HttpGet(url.toString());
@@ -141,6 +136,8 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             } else {
                 throw new CmisRuntimeException("Invalid HTTP method!");
             }
+
+            request.setConfig(createRequestConfig(session));
 
             // set content type
             if (contentType != null) {
@@ -213,12 +210,17 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                     request.setHeader("Content-Encoding", "gzip");
                 }
 
-                AbstractHttpEntity streamEntity = new AbstractHttpEntity() {
-                    @Override
-                    public boolean isChunked() {
-                        return true;
+                ContentType entityContentType = null;
+                if (contentType != null) {
+                    try {
+                        entityContentType = ContentType.parseLenient(contentType);
+                    } catch (Exception e) {
+                        entityContentType = null;
                     }
+                }
 
+                AbstractHttpEntity streamEntity = new AbstractHttpEntity(entityContentType,
+                        clientCompressionFlag ? "gzip" : null, true) {
                     @Override
                     public boolean isRepeatable() {
                         return false;
@@ -231,7 +233,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
                     @Override
                     public boolean isStreaming() {
-                        return false;
+                        return true;
                     }
 
                     @Override
@@ -241,7 +243,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
                     @Override
                     public void writeTo(final OutputStream outstream) throws IOException {
-                        OutputStream connOut = null;
+                        OutputStream connOut;
 
                         if (clientCompressionFlag) {
                             connOut = new GZIPOutputStream(outstream, 4096);
@@ -263,16 +265,21 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                             ((GZIPOutputStream) connOut).finish();
                         }
                     }
+
+                    @Override
+                    public void close() {
+                        // nothing to close; stream is produced on write
+                    }
                 };
-                ((HttpEntityEnclosingRequestBase) request).setEntity(streamEntity);
+                request.setEntity(streamEntity);
             }
 
             // connect
-            HttpResponse response = httpclient.execute(request);
+            CloseableHttpResponse response = httpclient.execute(request);
             HttpEntity entity = response.getEntity();
 
             // get stream, if present
-            respCode = response.getStatusLine().getStatusCode();
+            respCode = response.getCode();
             InputStream inputStream = null;
             InputStream errorStream = null;
 
@@ -292,7 +299,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
             // collect headers
             Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
-            for (Header header : response.getAllHeaders()) {
+            for (Header header : response.getHeaders()) {
                 List<String> values = responseHeaders.get(header.getName());
                 if (values == null) {
                     values = new ArrayList<String>();
@@ -313,38 +320,38 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             }
 
             // get the response
-            return new Response(respCode, response.getStatusLine().getReasonPhrase(), responseHeaders, inputStream,
-                    errorStream);
+            return new Response(respCode, response.getReasonPhrase(), responseHeaders, inputStream, errorStream);
         } catch (Exception e) {
             throw new CmisConnectionException(url.toString(), respCode, e);
         }
     }
 
     /**
-     * Creates default params for the Apache HTTP Client.
+     * Creates default request configuration for the Apache HTTP Client 5.
      */
-    protected HttpParams createDefaultHttpParams(BindingSession session) {
-        HttpParams params = new BasicHttpParams();
-
-        HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
-        HttpProtocolParams.setUserAgent(params,
-                (String) session.get(SessionParameter.USER_AGENT, ClientVersion.OPENCMIS_USER_AGENT));
-        HttpProtocolParams.setContentCharset(params, IOUtils.UTF8);
-        HttpProtocolParams.setUseExpectContinue(params, true);
-
-        HttpConnectionParams.setStaleCheckingEnabled(params, true);
+    protected RequestConfig createRequestConfig(BindingSession session) {
+        RequestConfig.Builder builder = RequestConfig.custom().setCookieSpec(StandardCookieSpec.IGNORE)
+                .setExpectContinueEnabled(true);
 
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
         if (connectTimeout >= 0) {
-            HttpConnectionParams.setConnectionTimeout(params, connectTimeout);
+            builder.setConnectionRequestTimeout(Timeout.ofMilliseconds(connectTimeout));
+            builder.setConnectTimeout(Timeout.ofMilliseconds(connectTimeout));
         }
 
         int readTimeout = session.get(SessionParameter.READ_TIMEOUT, -1);
         if (readTimeout >= 0) {
-            HttpConnectionParams.setSoTimeout(params, readTimeout);
+            builder.setResponseTimeout(Timeout.ofMilliseconds(readTimeout));
         }
 
-        return params;
+        return builder.build();
+    }
+
+    /**
+     * Returns the User-Agent string for the given session.
+     */
+    protected String getUserAgent(BindingSession session) {
+        return (String) session.get(SessionParameter.USER_AGENT, ClientVersion.OPENCMIS_USER_AGENT);
     }
 
     /**
@@ -352,12 +359,8 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
      */
     protected void verify(HostnameVerifier verifier, String host, SSLSocket sslSocket) throws IOException {
         try {
-            if (verifier instanceof X509HostnameVerifier) {
-                ((X509HostnameVerifier) verifier).verify(host, sslSocket);
-            } else {
-                if (!verifier.verify(host, sslSocket.getSession())) {
-                    throw new SSLException("Hostname in certificate didn't match: <" + host + ">");
-                }
+            if (!verifier.verify(host, sslSocket.getSession())) {
+                throw new SSLException("Hostname in certificate didn't match: <" + host + ">");
             }
         } catch (IOException ioe) {
             closeSocket(sslSocket);
@@ -377,7 +380,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     }
 
     /**
-     * Creates the {@link HttpClient} instance.
+     * Creates the {@link CloseableHttpClient} instance.
      */
-    protected abstract DefaultHttpClient createHttpClient(UrlBuilder url, BindingSession session);
+    protected abstract CloseableHttpClient createHttpClient(UrlBuilder url, BindingSession session);
 }

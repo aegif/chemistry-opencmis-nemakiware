@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.1.1-nemakiware</version>
+        <version>1.1.2-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -78,7 +78,7 @@
                             org.apache.chemistry.opencmis.client.bindings.spi.*;version=${project.version},
                             !org.apache.chemistry.opencmis.commons.impl.json.*,
                             !org.apache.chemistry.opencmis.commons.impl.jaxb.*,
-                            !org.apache.http.*,
+                            !org.apache.hc.*,
                             !org.apache.cxf.*,
                             !okhttp3.*,
                             !okio.*
@@ -135,9 +135,9 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>${apacheclient.version}</version>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>${httpclient5.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

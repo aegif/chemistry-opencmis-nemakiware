@@ -44,10 +44,10 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertyIdImpl;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertyIntegerImpl;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertyStringImpl;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertyUriImpl;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import org.junit.Before;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,7 @@ public abstract class AbstractConverterTest {
 
     protected Random rnd;
 
-    @Before
+    @BeforeEach
     public void init() throws Exception {
         rnd = new Random(SEED);
     }
@@ -289,21 +289,21 @@ public abstract class AbstractConverterTest {
         // handle simple types
         if ((expected instanceof String) || (expected instanceof Boolean) || (expected instanceof BigInteger)
                 || (expected instanceof BigDecimal) || (expected instanceof Enum<?>)) {
-            assertEquals(name, expected, actual);
+            assertEquals(expected, actual, name);
 
             return;
         } else if (expected instanceof GregorianCalendar) {
             long expectedMillis = ((GregorianCalendar) expected).getTimeInMillis();
             long actualMillis = ((GregorianCalendar) actual).getTimeInMillis();
 
-            assertEquals(name, expectedMillis, actualMillis);
+            assertEquals(expectedMillis, actualMillis, name);
 
             return;
         } else if (expected instanceof List<?>) {
             List<?> expectedList = (List<?>) expected;
             List<?> actualList = (List<?>) actual;
 
-            assertEquals(name + ".length", expectedList.size(), actualList.size());
+            assertEquals(expectedList.size(), actualList.size(), name + ".length");
 
             for (int i = 0; i < expectedList.size(); i++) {
                 assertDataObjectsEquals(name + "[" + i + "]", expectedList.get(i), actualList.get(i), ignoreMethods);
@@ -314,10 +314,10 @@ public abstract class AbstractConverterTest {
             Map<?, ?> expectedMap = (Map<?, ?>) expected;
             Map<?, ?> actualMap = (Map<?, ?>) actual;
 
-            assertEquals(name + ".length", expectedMap.size(), actualMap.size());
+            assertEquals(expectedMap.size(), actualMap.size(), name + ".length");
 
             for (Map.Entry<?, ?> entry : expectedMap.entrySet()) {
-                assertTrue(name + ".contains[" + entry.getKey() + "]", actualMap.containsKey(entry.getKey()));
+                assertTrue(actualMap.containsKey(entry.getKey()), name + ".contains[" + entry.getKey() + "]");
                 assertDataObjectsEquals(name + "[" + entry.getKey() + "]", entry.getValue(),
                         actualMap.get(entry.getKey()), ignoreMethods);
             }
@@ -327,10 +327,10 @@ public abstract class AbstractConverterTest {
             Set<?> expectedSet = (Set<?>) expected;
             Set<?> actualSet = (Set<?>) actual;
 
-            assertEquals(name + ".length", expectedSet.size(), actualSet.size());
+            assertEquals(expectedSet.size(), actualSet.size(), name + ".length");
 
             for (Object item : expectedSet) {
-                assertTrue(name + ".contains[" + item + "]", actualSet.contains(item));
+                assertTrue(actualSet.contains(item), name + ".contains[" + item + "]");
             }
 
             return;

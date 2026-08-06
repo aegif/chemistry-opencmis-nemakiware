@@ -18,8 +18,8 @@
  */
 package org.apache.chemistry.opencmis.commons.impl.misc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -27,7 +27,7 @@ import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import org.apache.chemistry.opencmis.commons.impl.DateTimeHelper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class DateTimeTest {
 

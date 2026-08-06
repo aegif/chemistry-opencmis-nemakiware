@@ -18,9 +18,9 @@
  */
 package org.apache.chemistry.opencmis.commons.impl.endpoints;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -30,7 +30,7 @@ import java.util.List;
 import org.apache.chemistry.opencmis.commons.endpoints.CmisAuthentication;
 import org.apache.chemistry.opencmis.commons.endpoints.CmisEndpoint;
 import org.apache.chemistry.opencmis.commons.endpoints.CmisEndpointsDocument;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class EndpointsTest {
 

@@ -27,18 +27,21 @@ import static org.apache.chemistry.opencmis.commons.impl.MimeHelper.encodeConten
 import static org.apache.chemistry.opencmis.commons.impl.MimeHelper.getBoundaryFromMultiPart;
 import static org.apache.chemistry.opencmis.commons.impl.MimeHelper.getChallengesFromAuthenticateHeader;
 import static org.apache.chemistry.opencmis.commons.impl.MimeHelper.getCharsetFromContentType;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.commons.impl.IOUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class MimeHelperTest extends TestCase {
+public class MimeHelperTest {
 
     @Test
     public void testEncodeContentDisposition() {

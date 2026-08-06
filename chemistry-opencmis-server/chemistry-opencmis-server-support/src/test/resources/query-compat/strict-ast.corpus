@@ -49,3 +49,27 @@ ok	query	SELECT Y.CLAIM_NUM, X.PROPERTY_ADDRESS, Y.DAMAGE_ESTIMATES FROM POLICY 
 fail	query	SELECT * TO MyType ORDER BY abc.def ASC
 fail	query	SELECT FROM Document
 fail	query	SELECT * FROM
+
+# ANTLR3/4 differential parity (nil flatten + keyword casing)
+ok	query	SELECT OBJECT_ID, SCORE() AS X, DESTINATION, DEPARTURE_DATES FROM TRAVEL_BROCHURE WHERE ( CONTAINS('CARIBBEAN CENTRAL AMERICA CRUISE TOUR') ) AND( '2010-1-1' = ANY DEPARTURE_DATES )	(SELECT (SEL_LIST (COL OBJECT_ID) SCORE X (COL DESTINATION) (COL DEPARTURE_DATES)) (FROM (TABLE TRAVEL_BROCHURE)) (WHERE (AND (CONTAINS 'CARIBBEAN CENTRAL AMERICA CRUISE TOUR') (EQ_ANY '2010-1-1' (COL DEPARTURE_DATES)))))
+ok	query	select * from cmis:document	(select * (from (TABLE cmis:document)))
+ok	query	select * from ComplexType where IntProp <= 20	(select * (from (TABLE ComplexType)) (where (<= (COL IntProp) 20)))
+ok	query	SELECT BooksAlias.Title AS abc, BooksAlias.Author def FROM BookType AS BooksAlias WHERE ISBN = '100'	(SELECT (SEL_LIST (COL BooksAlias Title) abc (COL BooksAlias Author) def) (FROM (TABLE BookType BooksAlias)) (WHERE (= (COL ISBN) '100')))
+ok	query	SELECT BookType.Author, Title TitleAlias FROM BookType WHERE TitleAlias <> 'Harry Potter'	(SELECT (SEL_LIST (COL BookType Author) (COL Title) TitleAlias) (FROM (TABLE BookType)) (WHERE (<> (COL TitleAlias) 'Harry Potter')))
+ok	query	SELECT BookType.* FROM BookType WHERE ISBN = '100'	(SELECT (SEL_LIST BookType . *) (FROM (TABLE BookType)) (WHERE (= (COL ISBN) '100')))
+ok	query	SELECT BookType.ISBN IsbnAlias FROM BookType WHERE IsbnAlias < '100'	(SELECT (SEL_LIST (COL BookType ISBN) IsbnAlias) (FROM (TABLE BookType)) (WHERE (< (COL IsbnAlias) '100')))
+ok	query	SELECT Title AS TitleAlias FROM BookType WHERE Author = 'Jim' ORDER BY TitleAlias	(SELECT (SEL_LIST (COL Title) TitleAlias) (FROM (TABLE BookType)) (ORDER_BY (COL TitleAlias) ASC) (WHERE (= (COL Author) 'Jim')))
+ok	query	SELECT Y.ISBN, X.MyBooleanProp, Y.Author FROM (MyDocType AS X JOIN BookType AS Y ON X.MyStringProp = Y.Title) 	(SELECT (SEL_LIST (COL Y ISBN) (COL X MyBooleanProp) (COL Y Author)) (FROM (TABLE MyDocType X) (JOIN INNER (TABLE BookType Y) (ON (COL X MyStringProp) = (COL Y Title)))))
+ok	query	SELECT t1.* FROM cmis:document	(SELECT (SEL_LIST t1 . *) (FROM (TABLE cmis:document)))
+ok	query	SELECT t2.aaa myalias FROM cmis:document	(SELECT (SEL_LIST (COL t2 aaa) myalias) (FROM (TABLE cmis:document)))
+ok	query	SELECT p1, p2, p3.t3 mycol FROM MyType AS MyAlias WHERE p1='abc' and p2=123 ORDER BY abc.def ASC	(SELECT (SEL_LIST (COL p1) (COL p2) (COL p3 t3) mycol) (FROM (TABLE MyType MyAlias)) (ORDER_BY (COL abc def) ASC) (WHERE (and (= (COL p1) 'abc') (= (COL p2) 123))))
+ok	query	SELECT p1.T1 MyAlias, p2.T1 AS MyAlias FROM T1	(SELECT (SEL_LIST (COL p1 T1) MyAlias (COL p2 T1) MyAlias) (FROM (TABLE T1)))
+ok	query	SELECT DISTINCT a, b, c FROM Document	(SELECT (SEL_LIST (COL DISTINCT) a (COL b) (COL c)) (FROM (TABLE Document)))
+ok	query	select foo from bar	(select (SEL_LIST (COL foo)) (from (TABLE bar)))
+ok	query	Select Foo From Bar	(Select (SEL_LIST (COL Foo)) (From (TABLE Bar)))
+ok	query	sElEcT foo FrOm bar	(sElEcT (SEL_LIST (COL foo)) (FrOm (TABLE bar)))
+ok	query	select * from cmis:document where cmis:name = 'x'	(select * (from (TABLE cmis:document)) (where (= (COL cmis:name) 'x')))
+ok	query	SELECT SCORE() AS s FROM t	(SELECT (SEL_LIST SCORE s) (FROM (TABLE t)))
+ok	query	SELECT DISTINCT f FROM t	(SELECT (SEL_LIST (COL DISTINCT) f) (FROM (TABLE t)))
+ok	query	SELECT f AS x FROM t	(SELECT (SEL_LIST (COL f) x) (FROM (TABLE t)))
+ok	query	SELECT f x FROM t	(SELECT (SEL_LIST (COL f) x) (FROM (TABLE t)))

@@ -44,7 +44,8 @@ public class CmisQlExtAstBuilder {
     }
 
     private CmisTree buildQuery(CmisQlExtParser.QueryContext ctx) {
-        CmisCommonTree select = node(CmisQlExtLexer.SELECT, "SELECT", ctx.SELECT().getSymbol());
+        // ANTLR3 kept the matched token, so the node text preserves input casing
+        CmisCommonTree select = node(CmisQlExtLexer.SELECT, ctx.SELECT().getText(), ctx.SELECT().getSymbol());
         if (ctx.DISTINCT() != null) {
             select.addChild(leaf(ctx.DISTINCT().getSymbol()));
         }
@@ -135,7 +136,7 @@ public class CmisQlExtAstBuilder {
     }
 
     private CmisTree buildFromClause(CmisQlExtParser.From_clauseContext ctx) {
-        CmisCommonTree from = node(CmisQlExtLexer.FROM, "FROM", ctx.FROM().getSymbol());
+        CmisCommonTree from = node(CmisQlExtLexer.FROM, ctx.FROM().getText(), ctx.FROM().getSymbol());
         CmisQlExtParser.Table_referenceContext tr = ctx.table_reference();
         from.addChild(buildOneTable(tr.one_table()));
         for (CmisQlExtParser.Table_joinContext join : tr.table_join()) {
@@ -193,7 +194,7 @@ public class CmisQlExtAstBuilder {
 
     private CmisTree buildWhereClause(CmisQlExtParser.Where_clauseContext ctx) {
         // For Ext tests we mainly need query/value_expression; provide a minimal WHERE
-        CmisCommonTree where = node(CmisQlExtLexer.WHERE, "WHERE", ctx.WHERE().getSymbol());
+        CmisCommonTree where = node(CmisQlExtLexer.WHERE, ctx.WHERE().getText(), ctx.WHERE().getSymbol());
         where.addChild(buildSearchCondition(ctx.search_condition()));
         return where;
     }

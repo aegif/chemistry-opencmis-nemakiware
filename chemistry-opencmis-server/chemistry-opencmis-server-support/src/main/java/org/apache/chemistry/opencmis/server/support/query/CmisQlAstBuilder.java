@@ -130,7 +130,8 @@ public class CmisQlAstBuilder {
     }
 
     private CmisTree buildQuery(CmisQlStrictParser.QueryContext ctx) {
-        CmisCommonTree select = node(CmisQlStrictLexer.SELECT, "SELECT", ctx.SELECT().getSymbol());
+        // ANTLR3 kept the matched token, so the node text preserves input casing
+        CmisCommonTree select = node(CmisQlStrictLexer.SELECT, ctx.SELECT().getText(), ctx.SELECT().getSymbol());
         select.addChild(buildSelectList(ctx.select_list()));
         select.addChild(buildFromClause(ctx.from_clause()));
         // ANTLR3 rewrite placed order_by before where
@@ -155,28 +156,11 @@ public class CmisQlAstBuilder {
     }
 
     private CmisTree buildSelectSublist(CmisQlStrictParser.Select_sublistContext ctx) {
+        // Alternatives without rewrite rules produced a nil-rooted flat tree in
+        // ANTLR3; CmisCommonTree.addChild splices nil children into the parent,
+        // so under SEL_LIST these become flat siblings, matching ANTLR3 output.
         if (ctx.STAR() != null) {
-            // qualifier DOT STAR — keep as qualifier child + STAR under a synthetic structure?
-            // ANTLR3: qualifier DOT STAR with no rewrite → tokens as siblings under parent.
-            // Under SEL_LIST, children are value_expression or qualifier DOT STAR as flat tokens.
-            // Actually in ANTLR3 without rewrite, `qualifier DOT STAR` becomes three tokens in AST
-            // when output=AST default is to include tokens. With default AST construction for
-            // unlabeled rules, it's typically a nil root with children, or just the tokens.
-            // Looking at walker: `s=qualifier DOT STAR` — expects qualifier and STAR as separate.
-            // In select_sublist AST under SEL_LIST, the shape for `t.*` is typically `t *` as two
-            // children of SEL_LIST? Or `(nil t . *)`?
-            // Walker rule: `| s=qualifier DOT STAR` matching against tree nodes from select_sublist.
-            // In ANTLR3 with output=AST and no rewrite, the rule creates an imaginary nil root
-            // with all tokens as children: ID, DOT, STAR. Or becomes flat under parent.
-            // For SEL_LIST rewrite `^(SEL_LIST select_sublist+)`, each select_sublist becomes a child.
-            // For `qualifier DOT STAR` without rewrite, select_sublist becomes a flat tree with
-            // children: qualifier's ID, DOT, STAR — often represented as nil-rooted.
-            // CommonTree for unlabeled alt typically has token type 0 (invalid) as root.
-            // Tests don't assert this case heavily. Walker uses $s.start for addSelectReference.
-            // Simplest compatible form: keep qualifier ID and STAR as siblings under a nil-like
-            // node, OR produce just the tokens as a two-child structure without DOT.
-            // Looking at ColumnReference construction: new ColumnReference($qualifier.value, $STAR.text)
-            // We'll produce a flat multi-child with qualifier then STAR (drop DOT like !).
+            // qualifier DOT STAR → flat tokens: ID . *
             CmisCommonTree nil = new CmisCommonTree(Token.INVALID_TYPE, "nil", tokenIndex(ctx.qualifier().start));
             nil.addChild(leaf(ctx.qualifier().table_name().ID().getSymbol()));
             nil.addChild(leaf(ctx.DOT().getSymbol()));
@@ -185,11 +169,7 @@ public class CmisQlAstBuilder {
         }
         CmisTree value = buildValueExpression(ctx.value_expression());
         if (ctx.column_name() != null) {
-            // value_expression (AS!? column_name)? — AS dropped; column_name becomes sibling
-            // Under SEL_LIST the select_sublist is one child — with AS! the column_name is
-            // additional child of... actually in ANTLR3:
-            // `value_expression ( AS!? column_name )?` without rewrite → nil root with
-            // value_expression tree and column_name as children.
+            // value_expression (AS!? column_name)? → value and alias as flat siblings
             CmisCommonTree nil = new CmisCommonTree(Token.INVALID_TYPE, "nil", tokenIndex(ctx.start));
             nil.addChild(value);
             nil.addChild(leaf(ctx.column_name().ID().getSymbol()));
@@ -228,7 +208,7 @@ public class CmisQlAstBuilder {
     }
 
     private CmisTree buildFromClause(CmisQlStrictParser.From_clauseContext ctx) {
-        CmisCommonTree from = node(CmisQlStrictLexer.FROM, "FROM", ctx.FROM().getSymbol());
+        CmisCommonTree from = node(CmisQlStrictLexer.FROM, ctx.FROM().getText(), ctx.FROM().getSymbol());
         // Flatten table_reference children into FROM
         CmisQlStrictParser.Table_referenceContext tr = ctx.table_reference();
         from.addChild(buildOneTable(tr.one_table()));
@@ -306,7 +286,7 @@ public class CmisQlAstBuilder {
     }
 
     private CmisTree buildWhereClause(CmisQlStrictParser.Where_clauseContext ctx) {
-        CmisCommonTree where = node(CmisQlStrictLexer.WHERE, "WHERE", ctx.WHERE().getSymbol());
+        CmisCommonTree where = node(CmisQlStrictLexer.WHERE, ctx.WHERE().getText(), ctx.WHERE().getSymbol());
         where.addChild(buildSearchCondition(ctx.search_condition()));
         return where;
     }

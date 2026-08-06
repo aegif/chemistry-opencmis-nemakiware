@@ -23,7 +23,6 @@ import java.math.BigDecimal;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Token;
 
 /**
  * Hand-written replacement for the ANTLR3 {@code CmisQueryWalker} tree grammar.
@@ -120,38 +119,32 @@ public class CmisQueryWalker {
             queryObj.addSelectReference(node, new ColumnReference(node.getText()));
             return;
         }
-        if (node.getType() == CmisQlStrictLexer.SEL_LIST) {
-            for (int i = 0; i < node.getChildCount(); i++) {
-                walkSelectSublist(node.getChild(i));
-            }
-        }
-    }
-
-    private void walkSelectSublist(CmisTree node) {
-        // qualifier DOT STAR
-        if (node.getChildCount() >= 3 && node.getChild(1).getType() == CmisQlStrictLexer.DOT
-                && node.getChild(2).getType() == CmisQlStrictLexer.STAR) {
-            String qualifier = node.getChild(0).getText();
-            queryObj.addSelectReference(node.getChild(0), new ColumnReference(qualifier, node.getChild(2).getText()));
+        if (node.getType() != CmisQlStrictLexer.SEL_LIST) {
             return;
         }
-        // also handle without nil: if node itself is unusual
-
-        CmisTree valueNode;
-        String alias = null;
-        if (node.getType() == Token.INVALID_TYPE || "nil".equals(node.getText())) {
-            valueNode = node.getChild(0);
-            if (node.getChildCount() > 1) {
-                alias = node.getChild(1).getText();
+        // SEL_LIST children are flat, like the ANTLR3 tree grammar saw them:
+        // each sublist is `value_expression column_name?` or `qualifier DOT STAR`
+        int i = 0;
+        int n = node.getChildCount();
+        while (i < n) {
+            CmisTree child = node.getChild(i);
+            if (child.getType() == CmisQlStrictLexer.ID && i + 2 < n
+                    && node.getChild(i + 1).getType() == CmisQlStrictLexer.DOT
+                    && node.getChild(i + 2).getType() == CmisQlStrictLexer.STAR) {
+                queryObj.addSelectReference(child,
+                        new ColumnReference(child.getText(), node.getChild(i + 2).getText()));
+                i += 3;
+                continue;
             }
-        } else {
-            valueNode = node;
-        }
-
-        CmisSelector sel = walkValueExpression(valueNode);
-        queryObj.addSelectReference(valueNode, sel);
-        if (alias != null) {
-            queryObj.addAlias(alias, sel);
+            CmisSelector sel = walkValueExpression(child);
+            queryObj.addSelectReference(child, sel);
+            i++;
+            // a following bare ID is an alias, unless it starts a `qualifier . *` sublist
+            if (i < n && node.getChild(i).getType() == CmisQlStrictLexer.ID
+                    && !(i + 1 < n && node.getChild(i + 1).getType() == CmisQlStrictLexer.DOT)) {
+                queryObj.addAlias(node.getChild(i).getText(), sel);
+                i++;
+            }
         }
     }
 

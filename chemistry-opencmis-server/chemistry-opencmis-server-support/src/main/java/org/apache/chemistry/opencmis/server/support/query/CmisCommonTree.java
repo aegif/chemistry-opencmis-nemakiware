@@ -21,9 +21,16 @@ package org.apache.chemistry.opencmis.server.support.query;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.antlr.v4.runtime.Token;
+
 /**
  * Mutable tree node compatible with ANTLR3 {@code CommonTree} usage in CMIS
  * query processing.
+ *
+ * <p>Mirrors ANTLR3 semantics for "nil" nodes (token type
+ * {@link Token#INVALID_TYPE}): adding a nil node as a child splices its
+ * children into the parent, and a nil root renders its children
+ * space-separated without enclosing parentheses.</p>
  */
 public class CmisCommonTree implements CmisTree {
 
@@ -84,12 +91,26 @@ public class CmisCommonTree implements CmisTree {
         this.parent = parent;
     }
 
+    public boolean isNil() {
+        return type == Token.INVALID_TYPE;
+    }
+
     @Override
     public void addChild(CmisTree child) {
-        if (child != null) {
-            child.setParent(this);
-            children.add(child);
+        if (child == null) {
+            return;
         }
+        // ANTLR3 BaseTree.addChild semantics: adding a nil tree splices its
+        // children into this node instead of adding the nil node itself.
+        if (child instanceof CmisCommonTree && ((CmisCommonTree) child).isNil()) {
+            for (CmisTree grandChild : ((CmisCommonTree) child).children) {
+                grandChild.setParent(this);
+                children.add(grandChild);
+            }
+            return;
+        }
+        child.setParent(this);
+        children.add(child);
     }
 
     @Override
@@ -111,13 +132,22 @@ public class CmisCommonTree implements CmisTree {
             return text;
         }
         StringBuilder sb = new StringBuilder();
-        sb.append('(');
-        sb.append(text);
+        // ANTLR3 CommonTree.toStringTree: a nil root prints only its children.
+        if (!isNil()) {
+            sb.append('(');
+            sb.append(text);
+        }
+        boolean first = isNil();
         for (CmisTree child : children) {
-            sb.append(' ');
+            if (!first) {
+                sb.append(' ');
+            }
+            first = false;
             sb.append(child.toStringTree());
         }
-        sb.append(')');
+        if (!isNil()) {
+            sb.append(')');
+        }
         return sb.toString();
     }
 }

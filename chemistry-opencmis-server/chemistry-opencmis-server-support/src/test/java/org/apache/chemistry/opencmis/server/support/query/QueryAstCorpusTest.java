@@ -28,12 +28,17 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Golden AST corpus for ANTLR4 compatibility. Expectations were frozen from
- * ANTLR3-era {@code TestParserStrict} asserts plus TextSearch rewrite shapes.
+ * ANTLR3-era {@code TestParserStrict} asserts, TextSearch rewrite shapes, and
+ * differential parity cases (nil flattening + keyword input casing).
  */
 public class QueryAstCorpusTest extends AbstractParserTest {
 
     static Stream<QueryCompatCorpus.Case> strictCases() throws Exception {
         return QueryCompatCorpus.stream("query-compat/strict-ast.corpus");
+    }
+
+    static Stream<QueryCompatCorpus.Case> extCases() throws Exception {
+        return QueryCompatCorpus.stream("query-compat/ext-ast.corpus");
     }
 
     static Stream<QueryCompatCorpus.Case> textSearchCases() throws Exception {
@@ -49,6 +54,13 @@ public class QueryAstCorpusTest extends AbstractParserTest {
     @MethodSource("strictCases")
     public void strictAstCorpus(QueryCompatCorpus.Case c) {
         kind = GrammarKind.STRICT;
+        runCase(c);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("extCases")
+    public void extAstCorpus(QueryCompatCorpus.Case c) {
+        kind = GrammarKind.EXT;
         runCase(c);
     }
 

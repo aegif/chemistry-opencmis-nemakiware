@@ -24,12 +24,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.chemistry.opencmis.client.bindings.impl.ClientVersion;
@@ -263,7 +267,6 @@ public class OkHttpHttpInvoker implements HttpInvoker {
      * 
      * @return the builder
      */
-    @SuppressWarnings("deprecation")
     protected OkHttpClient.Builder createClientBuilder(BindingSession session) {
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 
@@ -289,10 +292,10 @@ public class OkHttpHttpInvoker implements HttpInvoker {
                 }
 
                 if (tm == null) {
-                    clientBuilder.sslSocketFactory(sf);
-                } else {
-                    clientBuilder.sslSocketFactory(sf, tm);
+                    tm = systemDefaultTrustManager();
                 }
+
+                clientBuilder.sslSocketFactory(sf, tm);
             }
 
             HostnameVerifier hv = authProvider.getHostnameVerifier();
@@ -302,5 +305,21 @@ public class OkHttpHttpInvoker implements HttpInvoker {
         }
 
         return clientBuilder;
+    }
+
+    private static X509TrustManager systemDefaultTrustManager() {
+        try {
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init((KeyStore) null);
+            for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
+                if (trustManager instanceof X509TrustManager) {
+                    return (X509TrustManager) trustManager;
+                }
+            }
+            throw new IllegalStateException("No X509TrustManager found in default TrustManagerFactory");
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Unable to resolve system default X509TrustManager", e);
+        }
     }
 }

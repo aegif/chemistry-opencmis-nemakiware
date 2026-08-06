@@ -22,6 +22,7 @@ import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNot
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -275,7 +276,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             }
 
             // connect
-            CloseableHttpResponse response = httpclient.execute(request);
+            final CloseableHttpResponse response = httpclient.execute(request);
             HttpEntity entity = response.getEntity();
 
             // get stream, if present
@@ -285,14 +286,16 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
             if (respCode == 200 || respCode == 201 || respCode == 203 || respCode == 206) {
                 if (entity != null) {
-                    inputStream = entity.getContent();
+                    inputStream = wrapWithResponseClose(entity.getContent(), response);
                 } else {
+                    response.close();
                     inputStream = new ByteArrayInputStream(new byte[0]);
                 }
             } else {
                 if (entity != null) {
-                    errorStream = entity.getContent();
+                    errorStream = wrapWithResponseClose(entity.getContent(), response);
                 } else {
+                    response.close();
                     errorStream = new ByteArrayInputStream(new byte[0]);
                 }
             }
@@ -345,6 +348,22 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Wraps an entity stream so closing it also closes the HTTP response.
+     */
+    protected InputStream wrapWithResponseClose(InputStream stream, final CloseableHttpResponse response) {
+        return new FilterInputStream(stream) {
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                } finally {
+                    response.close();
+                }
+            }
+        };
     }
 
     /**

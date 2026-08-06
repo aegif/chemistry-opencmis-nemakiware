@@ -53,6 +53,25 @@ Compared with phase 2 (`1.1.1-nemakiware`):
 
 NemakiWare consumption remains out of scope for phase 3.
 
+Phase 4 modernization notes (1.1.3-nemakiware)
+==============================================
+
+Compared with phase 3 (`1.1.2-nemakiware`):
+
+ - Artifact version: `1.1.3-nemakiware`
+ - GitHub Actions: `actions/checkout@v5`, `actions/setup-java@v5`
+ - Maven plugins: assembly 3.7.1, antrun 3.1.0, resources 3.3.1,
+   source 3.3.1, remote-resources 3.2.0, buildnumber 3.2.1,
+   exec 3.5.0, release 3.1.1, surefire/failsafe 3.5.4
+ - OkHttp: `okhttp-jvm:5.4.0` (from `okhttp:4.12.0`; OkHttp 5
+   multiplatform JVM artifact)
+ - Test stack: JUnit Jupiter / Vintage `5.14.4` (existing JUnit 4 tests
+   keep running via Vintage; new invoker smoke tests use Jupiter)
+ - Apache HttpClient 5 invoker closes `CloseableHttpResponse` with the
+   response stream
+
+NemakiWare consumption remains out of scope for phase 4.
+
 Client-Bindings Integration Tests
 =================================
 

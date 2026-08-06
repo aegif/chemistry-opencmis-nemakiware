@@ -32,7 +32,7 @@
     <groupId>org.apache.chemistry.opencmis</groupId>
     <artifactId>chemistry-opencmis</artifactId>
     <name>Apache Chemistry OpenCMIS</name>
-    <version>1.1.2-nemakiware</version>
+    <version>1.1.3-nemakiware</version>
     <packaging>pom</packaging>
 
     <organization>
@@ -153,17 +153,19 @@
         <osgi.version>5.0.0</osgi.version>
         <felix.plugin.version>5.1.9</felix.plugin.version>
         <junit.version>4.13.2</junit.version>
-        <surefire.version>3.2.5</surefire.version>
-        <failsafe.version>3.2.5</failsafe.version>
+        <junit.jupiter.version>5.14.4</junit.jupiter.version>
+        <surefire.version>3.5.4</surefire.version>
+        <failsafe.version>3.5.4</failsafe.version>
         <jacoco.version>0.8.12</jacoco.version>
         <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
         <maven.enforcer.plugin.version>3.5.0</maven.enforcer.plugin.version>
-        <mockito.version>5.11.0</mockito.version>
+        <mockito.version>5.17.0</mockito.version>
         <slf4j.version>2.0.17</slf4j.version>
         <log4j.version>2.24.3</log4j.version>
         <httpclient5.version>5.5.1</httpclient5.version>
         <cxf.version>4.1.3</cxf.version>
-        <okhttp.version>4.12.0</okhttp.version>
+        <okhttp.version>5.4.0</okhttp.version>
+        <okhttp.artifactId>okhttp-jvm</okhttp.artifactId>
         
         <!-- Jakarta EE 11 aligned API versions -->
         <jakarta.xml.ws.version>4.0.1</jakarta.xml.ws.version>
@@ -246,17 +248,17 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.6</version>
+                    <version>3.7.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-antrun-plugin</artifactId>
-                    <version>1.8</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>1.2.1</version>
+                    <version>3.5.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -273,25 +275,25 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-remote-resources-plugin</artifactId>
-                    <version>1.4</version>
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-archetype-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.2.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>2.5.3</version>
+                    <version>3.1.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-source-plugin</artifactId>
-                    <version>3.0.1</version>
+                    <version>3.3.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.6</version>
+                    <version>3.3.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -304,7 +306,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
-                <version>1.2</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <phase>validate</phase>
@@ -557,6 +559,18 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

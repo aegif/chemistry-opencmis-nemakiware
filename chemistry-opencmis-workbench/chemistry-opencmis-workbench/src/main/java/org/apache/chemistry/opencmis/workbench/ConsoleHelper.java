@@ -56,8 +56,8 @@ import org.apache.chemistry.opencmis.workbench.ClientHelper.FileEntry;
 import org.apache.chemistry.opencmis.workbench.model.ClientModel;
 import org.apache.chemistry.opencmis.workbench.model.ClientSession;
 
+import groovy.console.ui.Console;
 import groovy.lang.Binding;
-import groovy.ui.Console;
 import groovy.util.GroovyScriptEngine;
 
 public class ConsoleHelper {

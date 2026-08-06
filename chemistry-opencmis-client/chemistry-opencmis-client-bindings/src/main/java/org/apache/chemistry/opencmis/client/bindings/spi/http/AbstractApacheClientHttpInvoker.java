@@ -22,6 +22,7 @@ import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNot
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,7 +59,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
 import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +71,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractApacheClientHttpInvoker.class);
 
-    protected static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker.httpClient";
+    public static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker.httpClient";
     protected static final int BUFFER_SIZE = 2 * 1024 * 1024;
 
     @Override
@@ -220,59 +221,29 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                     }
                 }
 
-                AbstractHttpEntity streamEntity = new AbstractHttpEntity(entityContentType,
-                        clientCompressionFlag ? "gzip" : null, true) {
-                    @Override
-                    public boolean isRepeatable() {
-                        return false;
+                // Buffer the request body so HC5 can send a known Content-Length.
+                // Chunked streaming entities have deadlocked against embedded Tomcat
+                // in FIT (Create Document). TCK payloads are small enough to buffer.
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                OutputStream out = bos;
+                GZIPOutputStream gzip = null;
+                if (clientCompressionFlag) {
+                    gzip = new GZIPOutputStream(bos, 4096);
+                    out = gzip;
+                }
+                out = new BufferedOutputStream(out, 64 * 1024);
+                try {
+                    writer.write(out);
+                    out.flush();
+                    if (gzip != null) {
+                        gzip.finish();
                     }
-
-                    @Override
-                    public long getContentLength() {
-                        return -1;
-                    }
-
-                    @Override
-                    public boolean isStreaming() {
-                        return true;
-                    }
-
-                    @Override
-                    public InputStream getContent() throws IOException {
-                        throw new UnsupportedOperationException();
-                    }
-
-                    @Override
-                    public void writeTo(final OutputStream outstream) throws IOException {
-                        OutputStream connOut;
-
-                        if (clientCompressionFlag) {
-                            connOut = new GZIPOutputStream(outstream, 4096);
-                        } else {
-                            connOut = outstream;
-                        }
-
-                        OutputStream out = new BufferedOutputStream(connOut, BUFFER_SIZE);
-                        try {
-                            writer.write(out);
-                        } catch (IOException ioe) {
-                            throw ioe;
-                        } catch (Exception e) {
-                            throw new IOException(e);
-                        }
-                        out.flush();
-
-                        if (connOut instanceof GZIPOutputStream) {
-                            ((GZIPOutputStream) connOut).finish();
-                        }
-                    }
-
-                    @Override
-                    public void close() {
-                        // nothing to close; stream is produced on write
-                    }
-                };
-                request.setEntity(streamEntity);
+                } catch (IOException ioe) {
+                    throw ioe;
+                } catch (Exception e) {
+                    throw new IOException(e);
+                }
+                request.setEntity(new ByteArrayEntity(bos.toByteArray(), entityContentType));
             }
 
             // connect
@@ -333,8 +304,10 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
      * Creates default request configuration for the Apache HTTP Client 5.
      */
     protected RequestConfig createRequestConfig(BindingSession session) {
+        // Expect: 100-continue + chunked streaming entities can deadlock against
+        // some servlet containers (including embedded Tomcat used by FIT).
         RequestConfig.Builder builder = RequestConfig.custom().setCookieSpec(StandardCookieSpec.IGNORE)
-                .setExpectContinueEnabled(true);
+                .setExpectContinueEnabled(false);
 
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
         if (connectTimeout >= 0) {

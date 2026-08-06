@@ -32,7 +32,7 @@
     <groupId>org.apache.chemistry.opencmis</groupId>
     <artifactId>chemistry-opencmis</artifactId>
     <name>Apache Chemistry OpenCMIS</name>
-    <version>1.1.5-nemakiware</version>
+    <version>2.0.0-nemakiware</version>
     <packaging>pom</packaging>
 
     <organization>
@@ -176,6 +176,7 @@
         <jakarta.xml.bind.version>4.0.0</jakarta.xml.bind.version>
         <jakarta.activation.version>2.1.0</jakarta.activation.version>
         <angus.activation.version>2.0.2</angus.activation.version>
+        <!-- Align with NemakiWare (Tomcat 11 / Servlet 6.1). -->
         <jakarta.servlet.version>6.1.0</jakarta.servlet.version>
     </properties>
 

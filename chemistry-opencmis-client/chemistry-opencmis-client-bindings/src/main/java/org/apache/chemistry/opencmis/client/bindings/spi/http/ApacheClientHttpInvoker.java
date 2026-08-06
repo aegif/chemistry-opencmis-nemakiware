@@ -77,7 +77,10 @@ public class ApacheClientHttpInvoker extends AbstractApacheClientHttpInvoker {
                 // ignore
             }
             connManagerBuilder.setMaxConnPerRoute(maxConn);
-            connManagerBuilder.setMaxConnTotal(4 * maxConn);
+            connManagerBuilder.setMaxConnTotal(Math.max(50, 4 * maxConn));
+        } else {
+            connManagerBuilder.setMaxConnPerRoute(50);
+            connManagerBuilder.setMaxConnTotal(200);
         }
 
         PoolingHttpClientConnectionManager connManager = connManagerBuilder.build();

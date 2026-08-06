@@ -29,6 +29,10 @@ package org.apache.chemistry.opencmis.server.support.query;
  * (thus the boolean return values for clauses, and Object for values).
  * <p>
  * The method {@link #walkExpr} is the entry point.
+ * <p>
+ * <b>Migration (ANTLR4):</b> Node types are {@link CmisTree}, not ANTLR3
+ * {@code org.antlr.runtime.tree.Tree}. Custom walkers must recompile against
+ * this interface.
  */
 public interface PredicateWalker extends PredicateWalkerBase {
 

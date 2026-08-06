@@ -58,7 +58,7 @@ public class OkHttpHttpInvoker implements HttpInvoker {
 
     private static final Logger LOG = LoggerFactory.getLogger(OkHttpHttpInvoker.class);
 
-    protected static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.OkHttpHttpInvoker.httpClient";
+    public static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.OkHttpHttpInvoker.httpClient";
 
     public OkHttpHttpInvoker() {
     }

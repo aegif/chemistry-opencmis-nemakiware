@@ -24,7 +24,11 @@ package org.apache.chemistry.opencmis.commons.data;
 public interface MutableProperties extends Properties {
 
     /**
-     * Adds a property to the end of the property list.
+     * Adds a new property to the end of the property list.
+     * <p>
+     * Duplicate property IDs are rejected with
+     * {@link IllegalArgumentException} (CMIS-1041). Use
+     * {@link #replaceProperty(PropertyData)} to overwrite an existing id.
      * 
      * @param property
      *            the property, {@code null} values are ignored

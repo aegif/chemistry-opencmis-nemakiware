@@ -325,8 +325,19 @@ public final class TypeDefinitionFactory {
 
     /**
      * Creates a new type mutability object.
+     * <p>
+     * Primitive overload kept for binary compatibility with 1.1.x callers.
      */
     public TypeMutability createTypeMutability(boolean canCreate, boolean canUpdate, boolean canDelete) {
+        return createTypeMutability(Boolean.valueOf(canCreate), Boolean.valueOf(canUpdate),
+                Boolean.valueOf(canDelete));
+    }
+
+    /**
+     * Creates a new type mutability object. {@code null} flags are passed through
+     * to {@link TypeMutability} (nullable Boolean fields).
+     */
+    public TypeMutability createTypeMutability(Boolean canCreate, Boolean canUpdate, Boolean canDelete) {
         TypeMutabilityImpl result = new TypeMutabilityImpl();
 
         result.setCanCreate(canCreate);

@@ -271,16 +271,24 @@ public class StoredObjectImpl implements StoredObject {
         // set the base type id PropertyIds.CMIS_BASE_TYPE_ID outside because it
         // requires the type definition
         if (FilterParser.isContainedInFilter(PropertyIds.CREATED_BY, requestedIds)) {
+            String createdBy = getCreatedBy();
+            if (createdBy == null || createdBy.length() == 0) {
+                createdBy = UNKNOWN_USER;
+            }
             properties.put(PropertyIds.CREATED_BY,
-                    objFactory.createPropertyStringData(PropertyIds.CREATED_BY, getCreatedBy()));
+                    objFactory.createPropertyStringData(PropertyIds.CREATED_BY, createdBy));
         }
         if (FilterParser.isContainedInFilter(PropertyIds.CREATION_DATE, requestedIds)) {
             properties.put(PropertyIds.CREATION_DATE,
                     objFactory.createPropertyDateTimeData(PropertyIds.CREATION_DATE, getCreatedAt()));
         }
         if (FilterParser.isContainedInFilter(PropertyIds.LAST_MODIFIED_BY, requestedIds)) {
+            String modifiedBy = getModifiedBy();
+            if (modifiedBy == null || modifiedBy.length() == 0) {
+                modifiedBy = UNKNOWN_USER;
+            }
             properties.put(PropertyIds.LAST_MODIFIED_BY,
-                    objFactory.createPropertyStringData(PropertyIds.LAST_MODIFIED_BY, getModifiedBy()));
+                    objFactory.createPropertyStringData(PropertyIds.LAST_MODIFIED_BY, modifiedBy));
         }
         if (FilterParser.isContainedInFilter(PropertyIds.LAST_MODIFICATION_DATE, requestedIds)) {
             properties.put(PropertyIds.LAST_MODIFICATION_DATE,
@@ -336,7 +344,7 @@ public class StoredObjectImpl implements StoredObject {
      */
     @SuppressWarnings("unchecked")
     private void addSystemBaseProperties(Map<String, PropertyData<?>> properties, String user, boolean isCreated) {
-        if (user == null) {
+        if (user == null || user.length() == 0) {
             user = UNKNOWN_USER;
         }
 

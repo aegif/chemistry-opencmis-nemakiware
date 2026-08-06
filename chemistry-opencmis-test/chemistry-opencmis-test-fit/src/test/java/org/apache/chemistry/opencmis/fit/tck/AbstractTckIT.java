@@ -24,9 +24,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import org.apache.catalina.LifecycleEvent;
 import org.apache.catalina.LifecycleException;
@@ -90,6 +94,14 @@ public abstract class AbstractTckIT extends AbstractRunner {
                 System.getProperty(SessionParameter.REPOSITORY_ID, REPOSITORY_ID));
         parameters.put(SessionParameter.USER, System.getProperty(SessionParameter.USER, USER));
         parameters.put(SessionParameter.PASSWORD, System.getProperty(SessionParameter.PASSWORD, PASSWORD));
+        // Ensure HTTP Basic / UsernameToken so CallContext has a non-empty user
+        // (Browser/WebServices otherwise risk empty cmis:createdBy values).
+        parameters.put(SessionParameter.AUTH_HTTP_BASIC, "true");
+        parameters.put(SessionParameter.AUTH_SOAP_USERNAMETOKEN, "true");
+        // FIT against embedded Tomcat: prefer JDK invoker until HC5 request
+        // lifecycle is fully hardened for high-churn TCK sessions.
+        parameters.put(SessionParameter.HTTP_INVOKER_CLASS,
+                "org.apache.chemistry.opencmis.client.bindings.spi.http.DefaultHttpInvoker");
 
         if (usesVersionableDocumentType()) {
             parameters.put(TestParameters.DEFAULT_DOCUMENT_TYPE,
@@ -111,21 +123,41 @@ public abstract class AbstractTckIT extends AbstractRunner {
     @BeforeAll
     public static void startTomcat() throws LifecycleException, InterruptedException {
         File targetDir = new File(System.getProperty("project.build.directory", "./target"));
-        File[] children = targetDir.listFiles();
-        if (children == null) {
+        if (!targetDir.isDirectory()) {
             throw new RuntimeException("Build directory not found: " + targetDir.getAbsolutePath());
         }
 
-        File warFile = null;
-        for (File child : children) {
-            if (child.getName().endsWith(".war")) {
-                warFile = child;
+        // Prefer the reactor finalName so leftover WARs from older versions cannot
+        // silently become the FIT subject (directory listing order is undefined).
+        String finalName = System.getProperty("project.build.finalName");
+        File warFile;
+        if (finalName != null && !finalName.trim().isEmpty()) {
+            warFile = new File(targetDir, finalName.trim() + ".war");
+            if (!warFile.isFile()) {
+                throw new RuntimeException("Expected OpenCMIS WAR not found: " + warFile.getAbsolutePath());
             }
+        } else {
+            File[] wars = targetDir.listFiles((dir, name) -> name.endsWith(".war"));
+            if (wars == null || wars.length == 0) {
+                throw new RuntimeException("OpenCMIS WAR file not found in " + targetDir.getAbsolutePath());
+            }
+            if (wars.length > 1) {
+                StringBuilder names = new StringBuilder();
+                for (File w : wars) {
+                    if (names.length() > 0) {
+                        names.append(", ");
+                    }
+                    names.append(w.getName());
+                }
+                throw new RuntimeException(
+                        "Multiple WAR files in " + targetDir.getAbsolutePath()
+                                + " and project.build.finalName is unset: " + names);
+            }
+            warFile = wars[0];
         }
 
-        if (warFile == null) {
-            throw new RuntimeException("OpenCMIS WAR file not found!");
-        }
+        System.out.println("FIT deploying WAR: " + warFile.getAbsolutePath());
+        assertNoDuplicateOpenCmisLibs(warFile);
 
         portCounter++;
 
@@ -140,7 +172,7 @@ public abstract class AbstractTckIT extends AbstractRunner {
         tomcat = new Tomcat();
         tomcat.setBaseDir(tomcateBaseDir.getAbsolutePath());
         tomcat.setPort(getPort());
-        // Tomcat 9+/10 embed requires an explicit connector before start.
+        // Tomcat 9+/10+/11 embed requires an explicit connector before start.
         tomcat.getConnector();
         // tomcat.setSilent(true);
         tomcat.getHost().setCreateDirs(true);
@@ -296,6 +328,38 @@ public abstract class AbstractTckIT extends AbstractRunner {
         }
 
         return CmisTestResultStatus.fromLevel(max);
+    }
+
+    /**
+     * Polluted local {@code target/} trees can produce WARs that embed multiple
+     * versions of the same OpenCMIS jar (e.g. 1.1.3 and 2.0.0). Tomcat then
+     * loads an unpredictable mix and FIT results are meaningless.
+     */
+    private static void assertNoDuplicateOpenCmisLibs(File warFile) {
+        Map<String, String> artifactToJar = new HashMap<String, String>();
+        try (JarFile jarFile = new JarFile(warFile)) {
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String name = entry.getName();
+                if (!name.startsWith("WEB-INF/lib/") || !name.endsWith(".jar") || name.indexOf('/', 12) >= 0) {
+                    continue;
+                }
+                String fileName = name.substring("WEB-INF/lib/".length());
+                if (!fileName.startsWith("chemistry-opencmis-")) {
+                    continue;
+                }
+                String artifactKey = fileName.replaceFirst("-\\d.*\\.jar$", "");
+                String previous = artifactToJar.put(artifactKey, fileName);
+                if (previous != null) {
+                    throw new RuntimeException("WAR contains duplicate OpenCMIS libraries for '" + artifactKey
+                            + "': " + previous + " and " + fileName
+                            + ". Run 'mvn clean' before packaging FIT / inmemory WARs.");
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not inspect WAR libraries: " + warFile.getAbsolutePath(), e);
+        }
     }
 
     private static class TestProgressMonitor implements CmisTestProgressMonitor {

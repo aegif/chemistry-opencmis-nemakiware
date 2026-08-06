@@ -21,6 +21,10 @@ package org.apache.chemistry.opencmis.server.support.query;
 /**
  * Minimal ANTLR3-compatible AST node API used by CMIS query walkers and
  * evaluators.
+ * <p>
+ * Replaces {@code org.antlr.runtime.tree.Tree} / {@code CommonTree} after the
+ * ANTLR4 migration. Downstream walkers should depend on this type (and
+ * {@link CmisCommonTree}), not on the ANTLR3 runtime.
  */
 public interface CmisTree {
 

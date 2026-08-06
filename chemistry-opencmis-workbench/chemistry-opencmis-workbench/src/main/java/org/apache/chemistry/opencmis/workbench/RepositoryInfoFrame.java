@@ -20,13 +20,21 @@ package org.apache.chemistry.opencmis.workbench;
 
 import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNotEmpty;
 
+import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.GregorianCalendar;
 import java.util.Map;
 
 import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTree;
@@ -36,6 +44,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.commons.data.AclCapabilities;
 import org.apache.chemistry.opencmis.commons.data.ExtensionFeature;
 import org.apache.chemistry.opencmis.commons.data.PermissionMapping;
@@ -48,6 +57,7 @@ import org.apache.chemistry.opencmis.workbench.icons.ExtensionIcon;
 import org.apache.chemistry.opencmis.workbench.model.ClientModel;
 import org.apache.chemistry.opencmis.workbench.swing.ExtensionsTree;
 import org.apache.chemistry.opencmis.workbench.swing.InfoPanel;
+import org.apache.chemistry.opencmis.workbench.worker.WorkbenchWorker;
 
 public class RepositoryInfoFrame extends JFrame {
 
@@ -56,6 +66,7 @@ public class RepositoryInfoFrame extends JFrame {
     private static final String WINDOW_TITLE = "CMIS Repository Info";
 
     private final ClientModel model;
+    private JComponent infoPanel;
 
     public RepositoryInfoFrame(ClientModel model) {
         super();
@@ -72,6 +83,8 @@ public class RepositoryInfoFrame extends JFrame {
         setPreferredSize(new Dimension((int) (screenSize.getWidth() / 2.5), (int) (screenSize.getHeight() / 1.5)));
         setMinimumSize(new Dimension(200, 60));
 
+        setLayout(new BorderLayout());
+
         RepositoryInfo repInfo = null;
         try {
             repInfo = model.getRepositoryInfo();
@@ -81,7 +94,67 @@ public class RepositoryInfoFrame extends JFrame {
             return;
         }
 
-        add(new JScrollPane(new RepositoryInfoPanel(model, repInfo)));
+        infoPanel = new JScrollPane(new RepositoryInfoPanel(model, repInfo, -1));
+        add(infoPanel, BorderLayout.CENTER);
+
+        final JPanel inputPanel = new JPanel(new FlowLayout());
+        add(inputPanel, BorderLayout.PAGE_END);
+
+        JButton reloadButton = new JButton("Reload");
+        reloadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new WorkbenchWorker<RepositoryInfo>(RepositoryInfoFrame.this) {
+                    @Override
+                    protected String getTitle() {
+                        return "Reload Repository Info";
+                    }
+
+                    @Override
+                    protected String getMessage() {
+                        return "<html>Loading repository information...";
+                    }
+
+                    @Override
+                    protected boolean hasDialog() {
+                        return true;
+                    }
+
+                    @Override
+                    protected RepositoryInfo doInBackground() throws Exception {
+                        Session session = model.getClientSession().getSession();
+                        String repId = session.getRepositoryInfo().getId();
+                        return session.getBinding().getRepositoryService().getRepositoryInfo(repId, null);
+                    }
+
+                    @Override
+                    protected void finializeTask() {
+                    }
+
+                    @Override
+                    protected void done() {
+                        super.done();
+                        if (isCancelled()) {
+                            return;
+                        }
+                        try {
+                            RepositoryInfo repInfo = get();
+                            remove(infoPanel);
+                            infoPanel = new JScrollPane(
+                                    new RepositoryInfoPanel(model, repInfo, System.currentTimeMillis()));
+                            add(infoPanel, BorderLayout.CENTER);
+                            validate();
+                            repaint();
+                        } catch (Exception ex) {
+                            // Errors are already reported by WorkbenchWorker.done().
+                        }
+                    }
+                }.executeTask();
+            }
+        });
+        inputPanel.add(reloadButton, BorderLayout.LINE_END);
+
+        getRootPane().setDefaultButton(reloadButton);
 
         ClientHelper.installEscapeBinding(this, getRootPane(), true);
 
@@ -97,11 +170,18 @@ public class RepositoryInfoFrame extends JFrame {
         private static final long serialVersionUID = 1L;
 
         private final RepositoryInfo repInfo;
+        private final GregorianCalendar lastUpdate;
 
-        public RepositoryInfoPanel(ClientModel model, RepositoryInfo repInfo) {
+        public RepositoryInfoPanel(ClientModel model, RepositoryInfo repInfo, long lastUpdate) {
             super(model);
 
             this.repInfo = repInfo;
+            if (lastUpdate >= 0) {
+                this.lastUpdate = new GregorianCalendar();
+                this.lastUpdate.setTimeInMillis(lastUpdate);
+            } else {
+                this.lastUpdate = null;
+            }
             createGUI();
         }
 
@@ -242,7 +322,7 @@ public class RepositoryInfoFrame extends JFrame {
                     JTable permTable = new JTable(data, new String[] { "Permission", "Description" });
                     permTable.setFillsViewportHeight(true);
                     permTable.setRowHeight((int) (getFontMetrics(getFont()).getHeight() * 1.1));
-                    addComponent("Permissions:", new JScrollPane(permTable));
+                    addComponent("Permissions:", createScrollePane(permTable));
                 }
 
                 if (cap.getPermissionMapping() != null) {
@@ -258,7 +338,7 @@ public class RepositoryInfoFrame extends JFrame {
                     JTable permMapTable = new JTable(data, new String[] { "Key", "Permissions" });
                     permMapTable.setFillsViewportHeight(true);
                     permMapTable.setRowHeight((int) (getFontMetrics(getFont()).getHeight() * 1.1));
-                    addComponent("Permission mapping:", new JScrollPane(permMapTable));
+                    addComponent("Permission mapping:", createScrollePane(permMapTable));
                 }
             }
 
@@ -302,14 +382,24 @@ public class RepositoryInfoFrame extends JFrame {
 
                 extensionFeaturesTree.setModel(new DefaultTreeModel(extFeatRootNode));
 
-                addComponent("Extension Features:", new JScrollPane(extensionFeaturesTree));
+                addComponent("Extension Features:", createScrollePane(extensionFeaturesTree));
             }
 
             if (isNotEmpty(repInfo.getExtensions())) {
-                addComponent("Extensions:", new JScrollPane(new ExtensionsTree(repInfo.getExtensions())));
+                addComponent("Extensions:", createScrollePane(new ExtensionsTree(repInfo.getExtensions())));
             }
 
+            addSeparator();
+            addLine("Last update:").setText(lastUpdate != null ? ClientHelper.getDateString(lastUpdate) : "(session)");
+
             regenerateGUI();
+        }
+
+        private JScrollPane createScrollePane(Component comp) {
+            JScrollPane pane = new JScrollPane(comp);
+            pane.setPreferredSize(new Dimension(pane.getPreferredSize().width, WorkbenchScale.scaleInt(200)));
+
+            return pane;
         }
 
         private void appendToString(StringBuilder sb, String str) {

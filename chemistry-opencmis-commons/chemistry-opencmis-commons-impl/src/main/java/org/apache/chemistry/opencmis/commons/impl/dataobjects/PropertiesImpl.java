@@ -81,6 +81,10 @@ public class PropertiesImpl extends AbstractExtensionData implements MutableProp
         return Collections.unmodifiableList(propertyList);
     }
 
+    /**
+     * Adds all properties from the collection. Duplicate IDs fail via
+     * {@link #addProperty(PropertyData)} (CMIS-1041).
+     */
     protected void addProperties(Collection<PropertyData<?>> properties) {
         if (properties != null) {
             for (PropertyData<?> prop : properties) {
@@ -89,10 +93,18 @@ public class PropertiesImpl extends AbstractExtensionData implements MutableProp
         }
     }
 
+    /**
+     * Adds a new property. Duplicate IDs throw {@link IllegalArgumentException}
+     * (CMIS-1041); use {@link #replaceProperty(PropertyData)} to overwrite.
+     */
     @Override
     public void addProperty(PropertyData<?> property) {
         if (property == null) {
             return;
+        }
+
+        if (properties.containsKey(property.getId())) {
+            throw new IllegalArgumentException("Property '" + property.getId() + "' already added.");
         }
 
         propertyList.add(property);

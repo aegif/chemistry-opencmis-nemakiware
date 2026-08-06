@@ -146,7 +146,7 @@ package org.apache.chemistry.opencmis.commons;
  * <td>AtomPub, Web Services, Browser</td>
  * <td>class name</td>
  * <td>no</td>
- * <td>org.apache.chemistry.opencmis.client.bindings.spi.http.DefaultHttpInvoker
+ * <td>org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker
  * </td>
  * </tr>
  * <tr>

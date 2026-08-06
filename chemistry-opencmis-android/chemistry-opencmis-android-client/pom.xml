@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.1.5-nemakiware</version>
+        <version>2.0.0-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -46,6 +46,17 @@
             <artifactId>woodstox-core</artifactId>
             <version>${woodstox.version}</version>
         </dependency>
+        <!-- Woodstox 7 excludes stax-api (assumes JDK). Android has no javax.xml.stream. -->
+        <dependency>
+            <groupId>javax.xml.stream</groupId>
+            <artifactId>stax-api</artifactId>
+            <version>1.0-2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.woodstox</groupId>
+            <artifactId>stax2-api</artifactId>
+            <version>4.2.2</version>
+        </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>${okhttp.artifactId}</artifactId>
@@ -57,6 +68,12 @@
             <artifactId>httpclient5</artifactId>
             <version>${httpclient5.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

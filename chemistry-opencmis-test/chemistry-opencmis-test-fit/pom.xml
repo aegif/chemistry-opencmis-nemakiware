@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.1.5-nemakiware</version>
+        <version>2.0.0-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -35,7 +35,7 @@
 
     <properties>
         <parentBasedir>../../</parentBasedir>
-        <tomcat.version>10.1.39</tomcat.version>
+        <tomcat.version>11.0.24</tomcat.version>
         <overlay.groupId />
         <overlay.artifactId />
         <factory.class />
@@ -94,42 +94,16 @@
                     <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
                     <argLine>-Xmx2048m</argLine>
                     <systemPropertyVariables>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.session.repository.id</name>
-                            <value>${repository}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.user</name>
-                            <value>${user}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.password</name>
-                            <value>${password}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.tck.default.documentType</name>
-                            <value>${default.documentType}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.tck.default.versionableDocumentType</name>
-                            <value>${default.versionableDocumentType}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.tck.testNotVersionable</name>
-                            <value>${test.notVersionable}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>org.apache.chemistry.opencmis.tck.testVersionable</name>
-                            <value>${test.versionable}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>project.basedir</name>
-                            <value>${project.basedir}</value>
-                        </systemProperty>
-                        <systemProperty>
-                            <name>project.build.directory</name>
-                            <value>${project.build.directory}</value>
-                        </systemProperty>
+                        <org.apache.chemistry.opencmis.session.repository.id>${repository}</org.apache.chemistry.opencmis.session.repository.id>
+                        <org.apache.chemistry.opencmis.user>${user}</org.apache.chemistry.opencmis.user>
+                        <org.apache.chemistry.opencmis.password>${password}</org.apache.chemistry.opencmis.password>
+                        <org.apache.chemistry.opencmis.tck.default.documentType>${default.documentType}</org.apache.chemistry.opencmis.tck.default.documentType>
+                        <org.apache.chemistry.opencmis.tck.default.versionableDocumentType>${default.versionableDocumentType}</org.apache.chemistry.opencmis.tck.default.versionableDocumentType>
+                        <org.apache.chemistry.opencmis.tck.testNotVersionable>${test.notVersionable}</org.apache.chemistry.opencmis.tck.testNotVersionable>
+                        <org.apache.chemistry.opencmis.tck.testVersionable>${test.versionable}</org.apache.chemistry.opencmis.tck.testVersionable>
+                        <project.basedir>${project.basedir}</project.basedir>
+                        <project.build.directory>${project.build.directory}</project.build.directory>
+                        <project.build.finalName>${project.build.finalName}</project.build.finalName>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

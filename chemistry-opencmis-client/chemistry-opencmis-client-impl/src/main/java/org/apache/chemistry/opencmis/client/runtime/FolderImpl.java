@@ -222,6 +222,8 @@ public class FolderImpl extends AbstractFilableCmisObject implements Folder {
 
     @Override
     public ItemIterable<Document> getCheckedOutDocs(OperationContext context) {
+        checkContext(context);
+
         final String objectId = getObjectId();
         final NavigationService navigationService = getBinding().getNavigationService();
         final ObjectFactory objectFactory = getSession().getObjectFactory();
@@ -265,6 +267,8 @@ public class FolderImpl extends AbstractFilableCmisObject implements Folder {
 
     @Override
     public ItemIterable<CmisObject> getChildren(OperationContext context) {
+        checkContext(context);
+
         final String objectId = getObjectId();
         final NavigationService navigationService = getBinding().getNavigationService();
         final ObjectFactory objectFactory = getSession().getObjectFactory();
@@ -304,6 +308,8 @@ public class FolderImpl extends AbstractFilableCmisObject implements Folder {
 
     @Override
     public List<Tree<FileableCmisObject>> getDescendants(int depth, OperationContext context) {
+        checkContext(context);
+
         String objectId = getObjectId();
 
         // get the descendants
@@ -322,6 +328,8 @@ public class FolderImpl extends AbstractFilableCmisObject implements Folder {
 
     @Override
     public List<Tree<FileableCmisObject>> getFolderTree(int depth, OperationContext context) {
+        checkContext(context);
+
         String objectId = getObjectId();
 
         // get the folder tree

@@ -14,13 +14,29 @@ The Web Service Binding (SOAP) is not supported.
 Runtime / build notes
 ---------------------
  - XML uses the shared desktop StAX stack (`XMLConverter` / `XMLUtils` /
-   AtomPub SPI) via Woodstox (`com.fasterxml.woodstox:woodstox-core`).
-   The previous XmlPull / kxml2 forks are gone.
+   AtomPub SPI) via Woodstox (`com.fasterxml.woodstox:woodstox-core`)
+   plus explicit `javax.xml.stream:stax-api` and
+   `org.codehaus.woodstox:stax2-api` (Woodstox 7 excludes stax-api
+   because the JDK normally provides it; Android does not).
  - The artifact is compiled with `--release 11` (parent reactor stays on
-   Java 21). Consumers should target a modern Android minSdk that can
-   run Java 11 bytecode, or recompile with a lower release if needed.
- - Packaging is verified in CI (`package -DskipTests`); there is no
-   device/emulator smoke test in this repository.
+   Java 21). `--release 11` does not prove Android API / DEX
+   compatibility by itself; CI also runs a D8 conversion smoke
+   (`scripts/android-d8-smoke.sh`, min-api 26). Device/emulator
+   instrumentation is still out of scope in this repository.
+ - The `pack` ZIP/TAR includes the client JAR plus a `lib/` directory
+   with Woodstox, stax-api, and stax2-api. Maven consumers also get
+   those as transitive dependencies.
+ - Binary pack LICENSE/NOTICE documents third-party licenses. In
+   particular, `lib/stax-api-*.jar` (Streaming API for XML / JSR-173,
+   `javax.xml.stream:stax-api`) is under the CDDL 1.0 + GPL v2 dual
+   license (https://glassfish.dev.java.net/public/CDDL+GPL.html).
+   That jar is Category B under the ASF Third-Party License Policy and
+   is shipped only in the binary pack (not in the source distribution).
+ - Prefer OkHttp for Android sessions
+   (`...spi.http.OkHttpHttpInvoker`). The JVM default is Apache
+   HttpClient 5; both are available as session parameters.
+ - CI runs D8 (min-api 26) and an API 26 emulator smoke that pushes
+   the produced DEX onto a running emulator.
 
 
 IMPORTANT: synchronous API
@@ -39,12 +55,12 @@ Maven dependency
         <version>${opencmis.version}</version>
     </dependency>
 
-Also add an SLF4J Android binding appropriate for your app
-(for example `org.slf4j:slf4j-android`).
+Transitive runtime jars should include Woodstox, stax-api, and stax2-api.
+If you shade/minimize, keep `javax.xml.stream` and Woodstox factories.
 
 
-Code sample
------------
-See the previous Activity / AsyncTask sample in git history, or use
-SessionFactoryImpl with AtomPub parameters as in the desktop client
-documentation.
+Build
+-----
+
+    mvn -pl chemistry-opencmis-android/chemistry-opencmis-android-client -am package
+    ./scripts/android-d8-smoke.sh

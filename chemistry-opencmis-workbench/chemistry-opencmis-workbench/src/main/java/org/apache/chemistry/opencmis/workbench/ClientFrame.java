@@ -30,7 +30,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.prefs.Preferences;
 
@@ -124,18 +123,34 @@ public class ClientFrame extends JFrame implements WindowListener {
 
         setIconImages(ClientHelper.getCmisIconImages());
 
+        ImageIcon icon = ClientHelper.getCmisIconImage();
+        boolean isDockImageSet = false;
+
+        // Java >= 9 Taskbar API (works on Java 21+)
+        try {
+            Class<?> taskbarClass = Class.forName("java.awt.Taskbar");
+            Object taskbar = taskbarClass.getMethod("getTaskbar").invoke(null);
+
+            if (icon != null) {
+                try {
+                    taskbarClass.getMethod("setIconImage", Image.class).invoke(taskbar, icon.getImage());
+                    isDockImageSet = true;
+                } catch (Exception e) {
+                    LOG.debug("Could not set taskbar icon!", e);
+                }
+            }
+        } catch (Exception e) {
+            // Java < 9 or unsupported platform
+        }
+
         // Mac OS X goodies
         if (ClientHelper.isMacOSX()) {
             try {
-                Class<?> macAppClass = Class.forName("com.apple.eawt.Application");
-                Method macAppGetApp = macAppClass.getMethod("getApplication", (Class<?>[]) null);
-                Object macApp = macAppGetApp.invoke(null, (Object[]) null);
-
-                ImageIcon icon = ClientHelper.getCmisIconImage();
-                if (icon != null) {
+                if (!isDockImageSet && icon != null) {
+                    Class<?> macAppClass = Class.forName("com.apple.eawt.Application");
+                    Object macApp = macAppClass.getMethod("getApplication").invoke(null);
                     try {
-                        macAppClass.getMethod("setDockIconImage", new Class<?>[] { Image.class }).invoke(macApp,
-                                new Object[] { icon.getImage() });
+                        macAppClass.getMethod("setDockIconImage", Image.class).invoke(macApp, icon.getImage());
                     } catch (Exception e) {
                         LOG.debug("Could not set dock icon!", e);
                     }
@@ -143,8 +158,8 @@ public class ClientFrame extends JFrame implements WindowListener {
 
                 try {
                     Class<?> fullscreenClass = Class.forName("com.apple.eawt.FullScreenUtilities");
-                    fullscreenClass.getMethod("setWindowCanFullScreen", new Class<?>[] { Window.class, Boolean.TYPE })
-                            .invoke(fullscreenClass, this, true);
+                    fullscreenClass.getMethod("setWindowCanFullScreen", Window.class, Boolean.TYPE).invoke(null, this,
+                            true);
                 } catch (Exception e) {
                     LOG.debug("Could not add fullscreen button!", e);
                 }

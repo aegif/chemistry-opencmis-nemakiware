@@ -30,19 +30,26 @@ import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomFee
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomLink;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Output;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Response;
+import org.apache.chemistry.opencmis.commons.PropertyIds;
+import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.data.Acl;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.data.ExtensionsData;
 import org.apache.chemistry.opencmis.commons.data.ObjectData;
 import org.apache.chemistry.opencmis.commons.data.Properties;
+import org.apache.chemistry.opencmis.commons.data.PropertyData;
 import org.apache.chemistry.opencmis.commons.enums.IncludeRelationships;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 import org.apache.chemistry.opencmis.commons.impl.Constants;
 import org.apache.chemistry.opencmis.commons.impl.ReturnVersion;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.AccessControlListImpl;
+import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertiesImpl;
+import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertyStringImpl;
 import org.apache.chemistry.opencmis.commons.spi.Holder;
 import org.apache.chemistry.opencmis.commons.spi.VersioningService;
 
@@ -73,6 +80,11 @@ public class VersioningServiceImpl extends AbstractAtomPubService implements Ver
         }
 
         UrlBuilder url = new UrlBuilder(link);
+
+        // workaround for SharePoint 2010 - see CMIS-362
+        if (getSession().get(SessionParameter.INCLUDE_OBJECTID_URL_PARAM_ON_CHECKOUT, false)) {
+            url.addParameter("objectId", objectId.getValue());
+        }
 
         // set up object and writer
         final AtomEntryWriter entryWriter = new AtomEntryWriter(createIdObject(objectId.getValue()),
@@ -157,6 +169,41 @@ public class VersioningServiceImpl extends AbstractAtomPubService implements Ver
         url.addParameter(Constants.PARAM_CHECKIN_COMMENT, checkinComment);
         url.addParameter(Constants.PARAM_MAJOR, major);
         url.addParameter(Constants.PARAM_CHECK_IN, "true");
+
+        // workaround for SharePoint - check in without property change
+        if (getSession().get(SessionParameter.ADD_NAME_ON_CHECK_IN, false)) {
+            if (properties == null || properties.getPropertyList().isEmpty()) {
+                properties = new PropertiesImpl();
+
+                try {
+                    String name = null;
+
+                    // fetch the current name
+                    ObjectData obj = getObjectInternal(repositoryId, IdentifierType.ID, objectId.getValue(),
+                            ReturnVersion.THIS, "cmis:objectId,cmis:name", Boolean.FALSE, IncludeRelationships.NONE,
+                            "cmis:none", Boolean.FALSE, Boolean.FALSE, null);
+
+                    if (obj != null && obj.getProperties() != null && obj.getProperties().getProperties() != null
+                            && obj.getProperties().getProperties().get(PropertyIds.NAME) != null) {
+                        PropertyData<?> nameProp = obj.getProperties().getProperties().get(PropertyIds.NAME);
+                        if (nameProp.getFirstValue() instanceof String) {
+                            name = (String) nameProp.getFirstValue();
+                        }
+                    }
+
+                    if (name == null) {
+                        throw new CmisRuntimeException("Could not determine the name of the PWC!");
+                    }
+
+                    // set the document name to the same value - silly, but
+                    // SharePoint requires that at least one property value has
+                    // to be changed and the name is the only reliable property
+                    ((PropertiesImpl) properties).addProperty(new PropertyStringImpl(PropertyIds.NAME, name));
+                } catch (CmisBaseException e) {
+                    throw new CmisRuntimeException("Could not determine the name of the PWC: " + e.toString(), e);
+                }
+            }
+        }
 
         // set up writer
         final AtomEntryWriter entryWriter = new AtomEntryWriter(createObject(properties, null, policies),
@@ -276,6 +323,26 @@ public class VersioningServiceImpl extends AbstractAtomPubService implements Ver
             returnVersion = ReturnVersion.LASTESTMAJOR;
         }
 
+        // workaround for SharePoint - use the version series ID instead of the
+        // object ID
+        if (getSession().get(SessionParameter.LATEST_VERSION_WITH_VERSION_SERIES_ID, false)) {
+            if (versionSeriesId != null) {
+                objectId = versionSeriesId;
+            } else {
+                ObjectData obj = getObjectInternal(repositoryId, IdentifierType.ID, objectId, null,
+                        PropertyIds.OBJECT_ID + "," + PropertyIds.VERSION_SERIES_ID, Boolean.FALSE,
+                        IncludeRelationships.NONE, "cmis:none", Boolean.FALSE, Boolean.FALSE, extension);
+
+                if (obj.getProperties() != null && obj.getProperties().getProperties() != null) {
+                    PropertyData<?> versionSeriesProp = obj.getProperties().getProperties()
+                            .get(PropertyIds.VERSION_SERIES_ID);
+                    if (versionSeriesProp != null && versionSeriesProp.getFirstValue() instanceof String) {
+                        objectId = (String) versionSeriesProp.getFirstValue();
+                    }
+                }
+            }
+        }
+
         return getObjectInternal(repositoryId, IdentifierType.ID, objectId, returnVersion, filter,
                 includeAllowableActions, includeRelationships, renditionFilter, includePolicyIds, includeACL, extension);
     }
@@ -283,15 +350,7 @@ public class VersioningServiceImpl extends AbstractAtomPubService implements Ver
     @Override
     public Properties getPropertiesOfLatestVersion(String repositoryId, String objectId, String versionSeriesId,
             Boolean major, String filter, ExtensionsData extension) {
-
-        ReturnVersion returnVersion = ReturnVersion.LATEST;
-        if ((major != null) && (major.booleanValue())) {
-            returnVersion = ReturnVersion.LASTESTMAJOR;
-        }
-
-        ObjectData object = getObjectInternal(repositoryId, IdentifierType.ID, objectId, returnVersion, filter,
-                Boolean.FALSE, IncludeRelationships.NONE, "cmis:none", Boolean.FALSE, Boolean.FALSE, extension);
-
-        return object.getProperties();
+        return getObjectOfLatestVersion(repositoryId, objectId, versionSeriesId, major, filter, Boolean.FALSE,
+                IncludeRelationships.NONE, "cmis:none", Boolean.FALSE, Boolean.FALSE, extension).getProperties();
     }
 }

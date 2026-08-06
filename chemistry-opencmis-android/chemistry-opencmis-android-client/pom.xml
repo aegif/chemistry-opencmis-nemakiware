@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.1.7-nemakiware</version>
+        <version>1.1.5-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -35,14 +35,16 @@
 
     <properties>
         <parentBasedir>../../</parentBasedir>
+        <!-- Bytecode target for mobile consumers; parent remains Java 21 for the rest. -->
+        <maven.compile.release>11</maven.compile.release>
     </properties>
 
     <dependencies>
+        <!-- XmlPull implementation (replaces android.util.Xml / provided Android stub). -->
         <dependency>
-            <groupId>com.google.android</groupId>
-            <artifactId>android</artifactId>
-            <version>2.3.3</version>
-            <scope>provided</scope>
+            <groupId>net.sf.kxml</groupId>
+            <artifactId>kxml2</artifactId>
+            <version>2.3.0</version>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

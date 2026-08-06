@@ -30,13 +30,18 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 import org.w3c.dom.Document;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
-
-import android.util.Xml;
 
 public final class XMLUtils {
 
     private XMLUtils() {
+    }
+
+    private static XmlPullParserFactory newFactory() throws XmlPullParserException {
+        XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+        factory.setNamespaceAware(true);
+        return factory;
     }
 
     // --------------
@@ -49,10 +54,13 @@ public final class XMLUtils {
     public static XmlSerializer createWriter(OutputStream out) throws IOException {
         assert out != null;
 
-        XmlSerializer writer = Xml.newSerializer();
-        writer.setOutput(out, IOUtils.UTF8);
-        
-        return writer;
+        try {
+            XmlSerializer writer = newFactory().newSerializer();
+            writer.setOutput(out, IOUtils.UTF8);
+            return writer;
+        } catch (XmlPullParserException e) {
+            throw new CmisRuntimeException("Cannot create XML serializer: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -186,7 +194,7 @@ public final class XMLUtils {
      * Creates a new XML parser with OpenCMIS default settings.
      */
     public static XmlPullParser createParser(InputStream stream) throws XmlPullParserException {
-        XmlPullParser parser = Xml.newPullParser();
+        XmlPullParser parser = newFactory().newPullParser();
         parser.setInput(stream, IOUtils.UTF8);
         return parser;
     }

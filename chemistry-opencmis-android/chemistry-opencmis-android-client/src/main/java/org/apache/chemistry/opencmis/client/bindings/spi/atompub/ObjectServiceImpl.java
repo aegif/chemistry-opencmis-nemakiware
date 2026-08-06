@@ -36,6 +36,7 @@ import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomLin
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Output;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Response;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
+import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.data.Acl;
 import org.apache.chemistry.opencmis.commons.data.AllowableActions;
 import org.apache.chemistry.opencmis.commons.data.BulkUpdateObjectIdAndChangeToken;
@@ -331,9 +332,13 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
 
         UrlBuilder url = new UrlBuilder(link);
         if (changeToken != null) {
-            // not required by the CMIS specification
-            // -> keep for backwards compatibility with older OpenCMIS servers
-            url.addParameter(Constants.PARAM_CHANGE_TOKEN, changeToken.getValue());
+            if (getSession().get(SessionParameter.OMIT_CHANGE_TOKENS, false)) {
+                changeToken.setValue(null);
+            } else {
+                // not required by the CMIS specification
+                // -> keep for backwards compatibility with older OpenCMIS servers
+                url.addParameter(Constants.PARAM_CHANGE_TOKEN, changeToken.getValue());
+            }
         }
 
         // set up writer
@@ -467,6 +472,10 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
         url.addParameter(Constants.PARAM_ALL_VERSIONS, allVersions);
 
         delete(url);
+
+        // Remove object from link cache after deletion so exists()/refresh()
+        // surfaces objectNotFound instead of a stale missing-rel error.
+        removeLinks(repositoryId, objectId);
     }
 
     @Override
@@ -514,6 +523,8 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
 
         // check response code
         if (resp.getResponseCode() == 200 || resp.getResponseCode() == 202 || resp.getResponseCode() == 204) {
+            // Same as deleteObject(): clear cached links for the deleted folder.
+            removeLinks(repositoryId, folderId);
             return new FailedToDeleteDataImpl();
         }
 
@@ -693,6 +704,13 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
         UrlBuilder url = new UrlBuilder(link);
         url.addParameter(Constants.PARAM_SOURCE_FOLDER_ID, sourceFolderId);
 
+        // workaround for SharePoint 2010 - see CMIS-839
+        boolean objectIdOnMove = getSession().get(SessionParameter.INCLUDE_OBJECTID_URL_PARAM_ON_MOVE, false);
+        if (objectIdOnMove) {
+            url.addParameter("objectId", objectId.getValue());
+            url.addParameter("targetFolderId", targetFolderId);
+        }
+
         // set up object and writer
         final AtomEntryWriter entryWriter = new AtomEntryWriter(createIdObject(objectId.getValue()),
                 getCmisVersion(repositoryId));
@@ -704,6 +722,13 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
                 entryWriter.write(out);
             }
         });
+
+        // workaround for SharePoint 2010 - see CMIS-839
+        if (objectIdOnMove) {
+            // SharePoint doesn't return a new object ID
+            // we assume that the object ID hasn't changed
+            return;
+        }
 
         // parse the response
         AtomEntry entry = parse(resp.getStream(), AtomEntry.class);
@@ -733,7 +758,7 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
         }
 
         UrlBuilder url = new UrlBuilder(link);
-        if (changeToken != null) {
+        if (changeToken != null && !getSession().get(SessionParameter.OMIT_CHANGE_TOKENS, false)) {
             url.addParameter(Constants.PARAM_CHANGE_TOKEN, changeToken.getValue());
         }
 
@@ -810,7 +835,7 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
         }
 
         UrlBuilder url = new UrlBuilder(link);
-        if (changeToken != null) {
+        if (changeToken != null && !getSession().get(SessionParameter.OMIT_CHANGE_TOKENS, false)) {
             url.addParameter(Constants.PARAM_CHANGE_TOKEN, changeToken.getValue());
         }
 
@@ -846,7 +871,13 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
             throw convertStatusCode(resp.getResponseCode(), resp.getResponseMessage(), resp.getErrorContent(), null);
         }
 
-        objectId.setValue(null);
+        if (resp.getResponseCode() == 201) {
+            // unset the object ID if a new resource has been created
+            // (if the resource has been updated (200 and 204), the object ID
+            // hasn't changed)
+            objectId.setValue(null);
+        }
+
         if (changeToken != null) {
             changeToken.setValue(null);
         }

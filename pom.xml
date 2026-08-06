@@ -32,7 +32,7 @@
     <groupId>org.apache.chemistry.opencmis</groupId>
     <artifactId>chemistry-opencmis</artifactId>
     <name>Apache Chemistry OpenCMIS</name>
-    <version>1.1.7-nemakiware</version>
+    <version>1.1.5-nemakiware</version>
     <packaging>pom</packaging>
 
     <organization>
@@ -168,6 +168,7 @@
         <okhttp.artifactId>okhttp-jvm</okhttp.artifactId>
         <!-- Overwritten by Jacoco prepare-agent when the coverage profile is active. -->
         <argLine></argLine>
+        <antlr3.version>3.5.3</antlr3.version>
         
         <!-- Jakarta EE 11 aligned API versions -->
         <jakarta.xml.ws.version>4.0.1</jakarta.xml.ws.version>
@@ -230,7 +231,7 @@
                 <plugin>
                     <groupId>org.antlr</groupId>
                     <artifactId>maven-gunit-plugin</artifactId>
-                    <version>3.3</version>
+                    <version>${antlr3.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

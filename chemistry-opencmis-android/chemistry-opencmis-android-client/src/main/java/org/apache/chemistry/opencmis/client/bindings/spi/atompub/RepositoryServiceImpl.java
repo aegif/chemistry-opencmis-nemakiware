@@ -68,12 +68,8 @@ public class RepositoryServiceImpl extends AbstractAtomPubService implements Rep
     public RepositoryInfo getRepositoryInfo(String repositoryId, ExtensionsData extension) {
         List<RepositoryInfo> repositoryInfos = getRepositoriesInternal(repositoryId);
 
-        if (repositoryInfos.size() == 0) {
+        if (repositoryInfos.isEmpty()) {
             throw new CmisObjectNotFoundException("Repository '" + repositoryId + "' not found!");
-        }
-
-        if (repositoryInfos.size() == 1) {
-            return repositoryInfos.get(0);
         }
 
         // find the repository

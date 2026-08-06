@@ -1,0 +1,19 @@
+# TextSearch AST golden corpus (frozen from ANTLR4 dump; shapes match ANTLR3 rewrite)
+# format: ok\trule\tinput\texpected_ast  OR  fail\trule\tinput
+ok	term	-abc	(- abc)
+ok	term	abc	abc
+ok	term	"abc def"	"abc def"
+ok	term	-"abc def"	(- "abc def")
+ok	conjunct	abc def	(TEXT_AND abc def)
+ok	conjunct	abc AND def	(TEXT_AND abc def)
+ok	text_search_expression	cat mouse dog	(TEXT_AND cat mouse dog)
+ok	text_search_expression	cat AND mouse AND dog	(TEXT_AND cat mouse dog)
+ok	text_search_expression	cat OR mouse OR dog	(TEXT_OR cat mouse dog)
+ok	text_search_expression	cat mouse OR dog	(TEXT_OR (TEXT_AND cat mouse) dog)
+ok	text_search_expression	cat AND mouse OR dog AND John\'s	(TEXT_OR (TEXT_AND cat mouse) (TEXT_AND dog John\'s))
+ok	text_search_expression	"cat AND mouse"	"cat AND mouse"
+ok	text_search_expression	"text search expression"	"text search expression"
+ok	text_search_expression	A\-1	A\-1
+fail	text_search_expression	AND OR
+fail	phrase	'abc'
+fail	word	OR

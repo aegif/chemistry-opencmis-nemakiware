@@ -106,6 +106,9 @@ Compared with phase 5 (`1.1.4-nemakiware`):
    supplemental-models updated for Jakarta artifacts
  - server-support CMIS query grammars migrated from ANTLR3 to ANTLR4
    4.13.2 (compatibility AST + hand-written CmisQueryWalker)
+ - Query compatibility gates: golden AST corpora under
+   `query-compat/*.corpus`, `QueryAstCorpusTest`,
+   `QuerySemanticSnapshotTest`, and `scripts/antlr4-compat-check.sh`
  - OSGi Core / Felix bundle plugin left at current versions (raise
    only after a dedicated compatibility pass)
 

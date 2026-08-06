@@ -109,8 +109,7 @@ Compared with phase 5 (`1.1.4-nemakiware`):
  - Query compatibility gates: golden AST corpora under
    `query-compat/*.corpus`, `QueryAstCorpusTest`,
    `QuerySemanticSnapshotTest`, and `scripts/antlr4-compat-check.sh`
- - OSGi Core / Felix bundle plugin left at current versions (raise
-   only after a dedicated compatibility pass)
+ - OSGi Core `org.osgi.core` 6.0.0; Felix `maven-bundle-plugin` 6.0.2
 
 HTTP invokers:
 
@@ -127,14 +126,11 @@ Explicitly deferred (follow-up phases):
 
 Android client (done in this phase beyond the earlier deferral note):
 
- - Removed `com.google.android:android` stub; XmlPull via kxml2
- - `--release 11` for the android module; PolicyServiceImpl / LinkCache
-   synced with critical desktop fixes
- - ObjectServiceImpl / VersioningServiceImpl / RepositoryServiceImpl
-   logic aligned with desktop (delete link-cache cleanup,
-   OMIT_CHANGE_TOKENS, SharePoint session-parameter workarounds)
- - Remaining: optional StAX-sharing to eliminate XMLConverter / parser
-   forks (AtomPubParser / AtomEntryWriter stay XmlPull-specific)
+ - Removed `com.google.android:android` stub
+ - `--release 11` for the android module
+ - StAX sharing: desktop `XMLConverter` / `XMLUtils` / AtomPub SPI are
+   copied into the android fat client; Woodstox replaces kxml2/XmlPull
+   forks so AtomPub stays in sync with the desktop client
 
 NemakiWare consumption remains out of scope for phase 6.
 

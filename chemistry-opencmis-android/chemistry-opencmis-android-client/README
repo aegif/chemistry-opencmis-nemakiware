@@ -13,8 +13,9 @@ The Web Service Binding (SOAP) is not supported.
 
 Runtime / build notes
 ---------------------
- - This module no longer depends on `com.google.android:android` stubs.
-   XML parsing uses XmlPull via `net.sf.kxml:kxml2`.
+ - XML uses the shared desktop StAX stack (`XMLConverter` / `XMLUtils` /
+   AtomPub SPI) via Woodstox (`com.fasterxml.woodstox:woodstox-core`).
+   The previous XmlPull / kxml2 forks are gone.
  - The artifact is compiled with `--release 11` (parent reactor stays on
    Java 21). Consumers should target a modern Android minSdk that can
    run Java 11 bytecode, or recompile with a lower release if needed.

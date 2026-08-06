@@ -46,13 +46,20 @@ import org.apache.hc.core5.util.Timeout;
  */
 public class ApacheClientHttpInvoker extends AbstractApacheClientHttpInvoker {
 
+    /** Default max connections per route — sized for concurrent CMIS / TCK load. */
+    public static final int DEFAULT_MAX_CONN_PER_ROUTE = 100;
+
+    /** Default max connections in the pool. */
+    public static final int DEFAULT_MAX_CONN_TOTAL = 200;
+
     @Override
     protected CloseableHttpClient createHttpClient(UrlBuilder url, BindingSession session) {
         PoolingHttpClientConnectionManagerBuilder connManagerBuilder = PoolingHttpClientConnectionManagerBuilder
                 .create().setSSLSocketFactory(getSSLSocketFactory(url, session));
 
         ConnectionConfig.Builder connectionConfig = ConnectionConfig.custom()
-                .setValidateAfterInactivity(TimeValue.ofMilliseconds(2000));
+                .setValidateAfterInactivity(TimeValue.ofMilliseconds(2000))
+                .setTimeToLive(TimeValue.ofMinutes(5));
 
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
         if (connectTimeout >= 0) {
@@ -66,28 +73,28 @@ public class ApacheClientHttpInvoker extends AbstractApacheClientHttpInvoker {
 
         connManagerBuilder.setDefaultConnectionConfig(connectionConfig.build());
 
-        // set max connections
-        String keepAliveStr = System.getProperty("http.keepAlive", "true");
-        if ("true".equalsIgnoreCase(keepAliveStr)) {
-            String maxConnStr = System.getProperty("http.maxConnections", "5");
-            int maxConn = 5;
-            try {
-                maxConn = Integer.parseInt(maxConnStr);
-            } catch (NumberFormatException nfe) {
-                // ignore
-            }
-            connManagerBuilder.setMaxConnPerRoute(maxConn);
-            connManagerBuilder.setMaxConnTotal(Math.max(50, 4 * maxConn));
-        } else {
-            connManagerBuilder.setMaxConnPerRoute(50);
-            connManagerBuilder.setMaxConnTotal(200);
+        int maxPerRoute = session.get(SessionParameter.HTTP_MAX_CONNECTIONS_PER_HOST, DEFAULT_MAX_CONN_PER_ROUTE);
+        int maxTotal = session.get(SessionParameter.HTTP_MAX_CONNECTIONS, DEFAULT_MAX_CONN_TOTAL);
+        if (maxPerRoute < 1) {
+            maxPerRoute = DEFAULT_MAX_CONN_PER_ROUTE;
         }
+        if (maxTotal < 1) {
+            maxTotal = DEFAULT_MAX_CONN_TOTAL;
+        }
+        if (maxTotal < maxPerRoute) {
+            maxTotal = maxPerRoute;
+        }
+        connManagerBuilder.setMaxConnPerRoute(maxPerRoute);
+        connManagerBuilder.setMaxConnTotal(maxTotal);
 
         PoolingHttpClientConnectionManager connManager = connManagerBuilder.build();
 
         return HttpClients.custom().setConnectionManager(connManager).setUserAgent(getUserAgent(session))
                 .setDefaultRequestConfig(createRequestConfig(session))
-                .setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault())).build();
+                .setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault()))
+                .evictExpiredConnections()
+                .evictIdleConnections(TimeValue.ofSeconds(30))
+                .build();
     }
 
     /**

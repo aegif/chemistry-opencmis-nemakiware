@@ -164,11 +164,32 @@ HTTP invokers:
  - Default is Apache HttpClient 5 `ApacheClientHttpInvoker`
    (`org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker`);
    `httpclient5` is a compile dependency of client-bindings
+ - High-load defaults (overridable via session parameters; apply when using
+   `ApacheClientHttpInvoker` for AtomPub / Browser — not CXF Web Services):
+   - max connections / route: 100 (`...binding.http.maxconnectionsperhost`)
+   - max connections total: 200 (`...binding.http.maxconnections`)
+   - connection-lease / materialization-permit wait: 60s
+     (`...binding.http.connectionrequesttimeout`)
+   - response bodies up to 1 MiB are buffered so pooled connections are
+     released immediately (`...binding.http.responsebufferlimit`); larger
+     bodies stream and must be closed by the caller
+   - request bodies are materialized under classloader-wide limits before the
+     HTTP connection is obtained (heap up to 1 MiB then temp file via
+     `...binding.http.requestmemorylimit`). Limits (first materialization in
+     the classloader locks concurrent/total settings — later sessions with
+     different values are rejected; not a multi-webapp host limit unless
+     OpenCMIS is on a shared classloader):
+     - temp dir: `...binding.http.tempdir` (JVM default temp dir)
+     - max per request body (heap and/or disk): 5 GiB
+       (`...binding.http.requestspoolmaxsize`)
+     - max concurrent materializations: 8
+       (`...binding.http.requestspoolmaxconcurrent`)
+     - max total active body bytes (heap + disk): 20 GiB
+       (`...binding.http.requestspoolmaxtotalbytes`)
  - Explicit alternatives (session parameter
    `org.apache.chemistry.opencmis.binding.httpinvoker.class`):
    - `...spi.http.OkHttpHttpInvoker` (OkHttp 5 / okhttp-jvm; recommended on Android)
-   - `...spi.http.DefaultHttpInvoker` (JDK HttpURLConnection; used by FIT TCK
-     against embedded Tomcat for session-churn stability)
+   - `...spi.http.DefaultHttpInvoker` (JDK HttpURLConnection)
  - Closing a session/binding releases cached Apache / OkHttp clients.
 
 Out of scope for this fork line (do not track as OpenCMIS work):

@@ -23,16 +23,20 @@ import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNot
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPOutputStream;
 
 import javax.net.ssl.HostnameVerifier;
@@ -45,6 +49,7 @@ import org.apache.chemistry.opencmis.client.bindings.spi.BindingSession;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
+import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
 import org.apache.chemistry.opencmis.commons.spi.AuthenticationProvider;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
@@ -60,6 +65,8 @@ import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.io.entity.FileEntity;
 import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +80,31 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
     public static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker.httpClient";
     protected static final int BUFFER_SIZE = 2 * 1024 * 1024;
+
+    /**
+     * Default max bytes to buffer eagerly so pooled connections are released
+     * immediately. Kept small so concurrent leases cannot dominate the heap.
+     */
+    public static final int DEFAULT_RESPONSE_BUFFER_LIMIT = 1024 * 1024;
+
+    /**
+     * Default max request bytes kept in heap before spilling to a temp file.
+     * Keeps Content-Length known (avoids chunked/Expect-Continue deadlocks)
+     * without loading multi-GB uploads into memory.
+     */
+    public static final int DEFAULT_REQUEST_MEMORY_LIMIT = 1024 * 1024;
+
+    /** Default max size of a single spilled request body on disk. */
+    public static final long DEFAULT_REQUEST_SPOOL_MAX_SIZE = 5L * 1024 * 1024 * 1024;
+
+    /** Default max concurrent disk-spooled request bodies process-wide. */
+    public static final int DEFAULT_REQUEST_SPOOL_MAX_CONCURRENT = 8;
+
+    /** Default max total bytes across all active disk spools process-wide. */
+    public static final long DEFAULT_REQUEST_SPOOL_MAX_TOTAL_BYTES = 20L * 1024 * 1024 * 1024;
+
+    /** Default wait for a free pooled connection (never block forever under load). */
+    public static final int DEFAULT_CONNECTION_REQUEST_TIMEOUT_MS = 60_000;
 
     @Override
     public Response invokeGET(UrlBuilder url, BindingSession session) {
@@ -103,6 +135,11 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     protected Response invoke(UrlBuilder url, String method, String contentType, Map<String, String> headers,
             final Output writer, final BindingSession session, BigInteger offset, BigInteger length) {
         int respCode = -1;
+        CloseableHttpResponse response = null;
+        InputStream inputStream = null;
+        InputStream errorStream = null;
+        File requestTempFile = null;
+        RequestSpoolLimiter.SpoolLease requestSpoolLease = null;
 
         try {
             // log before connect
@@ -221,57 +258,22 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                     }
                 }
 
-                // Buffer the request body so HC5 can send a known Content-Length.
-                // Chunked streaming entities have deadlocked against embedded Tomcat
-                // in FIT (Create Document). TCK payloads are small enough to buffer.
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                OutputStream out = bos;
-                GZIPOutputStream gzip = null;
-                if (clientCompressionFlag) {
-                    gzip = new GZIPOutputStream(bos, 4096);
-                    out = gzip;
-                }
-                out = new BufferedOutputStream(out, 64 * 1024);
-                try {
-                    writer.write(out);
-                    out.flush();
-                    if (gzip != null) {
-                        gzip.finish();
-                    }
-                } catch (IOException ioe) {
-                    throw ioe;
-                } catch (Exception e) {
-                    throw new IOException(e);
-                }
-                request.setEntity(new ByteArrayEntity(bos.toByteArray(), entityContentType));
+                PreparedRequestBody prepared = prepareRequestBody(writer, clientCompressionFlag, entityContentType,
+                        session);
+                requestTempFile = prepared.tempFile;
+                requestSpoolLease = prepared.spoolLease;
+                request.setEntity(prepared.entity);
             }
 
             // connect
-            final CloseableHttpResponse response = httpclient.execute(request);
+            response = httpclient.execute(request);
             HttpEntity entity = response.getEntity();
 
             // get stream, if present
             respCode = response.getCode();
-            InputStream inputStream = null;
-            InputStream errorStream = null;
 
-            if (respCode == 200 || respCode == 201 || respCode == 203 || respCode == 206) {
-                if (entity != null) {
-                    inputStream = wrapWithResponseClose(entity.getContent(), response);
-                } else {
-                    response.close();
-                    inputStream = new ByteArrayInputStream(new byte[0]);
-                }
-            } else {
-                if (entity != null) {
-                    errorStream = wrapWithResponseClose(entity.getContent(), response);
-                } else {
-                    response.close();
-                    errorStream = new ByteArrayInputStream(new byte[0]);
-                }
-            }
-
-            // collect headers
+            // Collect headers / status text before materializeEntity may close the response.
+            final String reasonPhrase = response.getReasonPhrase();
             Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
             for (Header header : response.getHeaders()) {
                 List<String> values = responseHeaders.get(header.getName());
@@ -281,6 +283,15 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 }
                 values.add(header.getValue());
             }
+
+            if (respCode == 200 || respCode == 201 || respCode == 203 || respCode == 206) {
+                inputStream = materializeEntity(entity, response, session);
+            } else {
+                errorStream = materializeEntity(entity, response, session);
+            }
+            // Ownership of the HTTP response is now with the returned streams
+            // (or already closed inside materializeEntity).
+            response = null;
 
             // log after connect
             if (LOG.isTraceEnabled()) {
@@ -293,10 +304,199 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 authProvider.putResponseHeaders(url.toString(), respCode, responseHeaders);
             }
 
-            // get the response
-            return new Response(respCode, response.getReasonPhrase(), responseHeaders, inputStream, errorStream);
+            Response result = new Response(respCode, reasonPhrase, responseHeaders, inputStream, errorStream);
+            // Response owns the streams now.
+            inputStream = null;
+            errorStream = null;
+            return result;
         } catch (Exception e) {
             throw new CmisConnectionException(url.toString(), respCode, e);
+        } finally {
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException ioe) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Closing HTTP response failed: {}", ioe.toString());
+                    }
+                }
+            }
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(errorStream);
+            boolean tempDeleted = true;
+            if (requestTempFile != null) {
+                if (requestTempFile.exists()) {
+                    tempDeleted = requestTempFile.delete();
+                    if (!tempDeleted) {
+                        requestTempFile.deleteOnExit();
+                        LOG.warn(
+                                "Failed to delete HTTP request temp file {}; keeping its size in the materialization byte budget",
+                                requestTempFile.getAbsolutePath());
+                    }
+                }
+            }
+            if (requestSpoolLease != null) {
+                if (tempDeleted) {
+                    requestSpoolLease.release();
+                } else {
+                    requestSpoolLease.releasePermitKeepBytes();
+                }
+            }
+        }
+    }
+
+    /**
+     * Builds a request entity by spooling to memory then optionally to a temp
+     * file under classloader-wide concurrency and size limits. A materialization
+     * permit is taken before any body bytes are buffered. Always produces a
+     * known Content-Length with a repeatable entity (byte array or file) so
+     * keep-alive connections stay consistent even when writers are one-shot or
+     * HttpClient retries.
+     */
+    protected PreparedRequestBody prepareRequestBody(final Output writer, final boolean gzip,
+            final ContentType entityContentType, BindingSession session) throws IOException {
+        RequestBodySpool spool = spoolRequestBody(writer, gzip, session);
+        return new PreparedRequestBody(spool.toEntity(entityContentType), spool.getTempFile(),
+                spool.transferLease());
+    }
+
+    /**
+     * Spools the request body to memory up to the configured limit, then to a
+     * temporary file. Always produces a known Content-Length entity.
+     */
+    protected RequestBodySpool spoolRequestBody(Output writer, boolean gzip, BindingSession session)
+            throws IOException {
+        int memoryLimit = (int) Math.min(Integer.MAX_VALUE,
+                getLong(session, SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, DEFAULT_REQUEST_MEMORY_LIMIT));
+        if (memoryLimit < 0) {
+            memoryLimit = DEFAULT_REQUEST_MEMORY_LIMIT;
+        }
+        long maxSpoolSize = getLong(session, SessionParameter.HTTP_REQUEST_SPOOL_MAX_SIZE,
+                DEFAULT_REQUEST_SPOOL_MAX_SIZE);
+        if (maxSpoolSize <= 0) {
+            maxSpoolSize = DEFAULT_REQUEST_SPOOL_MAX_SIZE;
+        }
+        long maxTotalBytes = getLong(session, SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES,
+                DEFAULT_REQUEST_SPOOL_MAX_TOTAL_BYTES);
+        if (maxTotalBytes <= 0) {
+            maxTotalBytes = DEFAULT_REQUEST_SPOOL_MAX_TOTAL_BYTES;
+        }
+        int maxConcurrent = (int) getLong(session, SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT,
+                DEFAULT_REQUEST_SPOOL_MAX_CONCURRENT);
+        if (maxConcurrent <= 0) {
+            maxConcurrent = DEFAULT_REQUEST_SPOOL_MAX_CONCURRENT;
+        }
+        File tempDir = resolveTempDir(session);
+        long acquireTimeout = resolveSpoolAcquireTimeout(session);
+
+        RequestBodySpool spool = new RequestBodySpool(memoryLimit, maxSpoolSize, maxTotalBytes, maxConcurrent, tempDir,
+                acquireTimeout);
+        OutputStream out = spool;
+        GZIPOutputStream gzipStream = null;
+        try {
+            spool.begin();
+            if (gzip) {
+                gzipStream = new GZIPOutputStream(out, 4096);
+                out = gzipStream;
+            }
+            out = new BufferedOutputStream(out, 64 * 1024);
+            try {
+                writer.write(out);
+                out.flush();
+                if (gzipStream != null) {
+                    gzipStream.finish();
+                }
+            } catch (IOException ioe) {
+                throw ioe;
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+            spool.finish();
+            return spool;
+        } catch (IOException ioe) {
+            spool.discard();
+            throw ioe;
+        } catch (RuntimeException re) {
+            spool.discard();
+            throw re;
+        }
+    }
+
+    /**
+     * Same normalization as connection-lease wait: never block forever.
+     */
+    protected static long resolveSpoolAcquireTimeout(BindingSession session) {
+        long acquireTimeout = getLong(session, SessionParameter.HTTP_CONNECTION_REQUEST_TIMEOUT,
+                DEFAULT_CONNECTION_REQUEST_TIMEOUT_MS);
+        if (acquireTimeout < 0) {
+            long connectTimeout = getLong(session, SessionParameter.CONNECT_TIMEOUT, -1);
+            acquireTimeout = connectTimeout >= 0 ? connectTimeout : DEFAULT_CONNECTION_REQUEST_TIMEOUT_MS;
+        }
+        return acquireTimeout;
+    }
+
+    protected static long getLong(BindingSession session, String key, long defaultValue) {
+        Object value = session.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(value.toString().trim());
+        } catch (NumberFormatException nfe) {
+            return defaultValue;
+        }
+    }
+
+    protected static File resolveTempDir(BindingSession session) throws IOException {
+        Object configured = session.get(SessionParameter.HTTP_TEMP_DIR);
+        if (configured == null || configured.toString().trim().isEmpty()) {
+            return null;
+        }
+        File dir = new File(configured.toString().trim());
+        if (!dir.isDirectory() && !dir.mkdirs()) {
+            throw new CmisConnectionException("Cannot create HTTP temp directory: " + dir.getAbsolutePath());
+        }
+        return dir;
+    }
+
+    /**
+     * Returns an input stream for the entity and releases the pooled connection
+     * as soon as practical. Bodies up to {@link SessionParameter#HTTP_RESPONSE_BUFFER_LIMIT}
+     * are copied into memory so callers cannot leak leases via partial reads.
+     * Larger bodies stream and close the HTTP response when the stream is closed.
+     */
+    protected InputStream materializeEntity(HttpEntity entity, CloseableHttpResponse response, BindingSession session)
+            throws IOException {
+        if (entity == null) {
+            response.close();
+            return new ByteArrayInputStream(new byte[0]);
+        }
+
+        long contentLength = entity.getContentLength();
+        int bufferLimit = session.get(SessionParameter.HTTP_RESPONSE_BUFFER_LIMIT, DEFAULT_RESPONSE_BUFFER_LIMIT);
+        if (bufferLimit < 0) {
+            bufferLimit = DEFAULT_RESPONSE_BUFFER_LIMIT;
+        }
+
+        // Large known bodies: stream to avoid huge heap spikes (caller must close).
+        if (contentLength > bufferLimit) {
+            return wrapWithResponseClose(entity.getContent(), response);
+        }
+
+        // Unknown length: stream (chunked large downloads). Small chunked AtomPub /
+        // Browser payloads are still closed by parsers via wrapWithResponseClose.
+        if (contentLength < 0) {
+            return wrapWithResponseClose(entity.getContent(), response);
+        }
+
+        try {
+            byte[] data = contentLength == 0 ? new byte[0] : EntityUtils.toByteArray(entity);
+            return new ByteArrayInputStream(data);
+        } finally {
+            response.close();
         }
     }
 
@@ -311,9 +511,15 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
         if (connectTimeout >= 0) {
-            builder.setConnectionRequestTimeout(Timeout.ofMilliseconds(connectTimeout));
             builder.setConnectTimeout(Timeout.ofMilliseconds(connectTimeout));
         }
+
+        // Never wait forever for a pooled connection under load.
+        int connectionRequestTimeout = session.get(SessionParameter.HTTP_CONNECTION_REQUEST_TIMEOUT, -1);
+        if (connectionRequestTimeout < 0) {
+            connectionRequestTimeout = connectTimeout >= 0 ? connectTimeout : DEFAULT_CONNECTION_REQUEST_TIMEOUT_MS;
+        }
+        builder.setConnectionRequestTimeout(Timeout.ofMilliseconds(connectionRequestTimeout));
 
         int readTimeout = session.get(SessionParameter.READ_TIMEOUT, -1);
         if (readTimeout >= 0) {
@@ -328,8 +534,14 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
      */
     protected InputStream wrapWithResponseClose(InputStream stream, final CloseableHttpResponse response) {
         return new FilterInputStream(stream) {
+            private boolean closed;
+
             @Override
             public void close() throws IOException {
+                if (closed) {
+                    return;
+                }
+                closed = true;
                 try {
                     super.close();
                 } finally {
@@ -375,4 +587,207 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
      * Creates the {@link CloseableHttpClient} instance.
      */
     protected abstract CloseableHttpClient createHttpClient(UrlBuilder url, BindingSession session);
+
+    /**
+     * Result of {@link #prepareRequestBody}.
+     */
+    protected static final class PreparedRequestBody {
+        final HttpEntity entity;
+        final File tempFile;
+        final RequestSpoolLimiter.SpoolLease spoolLease;
+
+        PreparedRequestBody(HttpEntity entity, File tempFile, RequestSpoolLimiter.SpoolLease spoolLease) {
+            this.entity = entity;
+            this.tempFile = tempFile;
+            this.spoolLease = spoolLease;
+        }
+    }
+
+    /**
+     * Threshold spool for request bodies: memory first, then a temp file.
+     * Acquires a materialization lease before any bytes are buffered.
+     */
+    protected static final class RequestBodySpool extends OutputStream {
+        private final int memoryLimit;
+        private final long maxSpoolSize;
+        private final long maxTotalBytes;
+        private final int maxConcurrent;
+        private final File tempDir;
+        private final long acquireTimeoutMs;
+        private ByteArrayOutputStream memory;
+        private File tempFile;
+        private OutputStream fileOut;
+        private long size;
+        private RequestSpoolLimiter.SpoolLease lease;
+        private boolean leaseTransferred;
+        private boolean finished;
+
+        RequestBodySpool(int memoryLimit, long maxSpoolSize, long maxTotalBytes, int maxConcurrent, File tempDir,
+                long acquireTimeoutMs) {
+            this.memoryLimit = memoryLimit;
+            this.maxSpoolSize = maxSpoolSize;
+            this.maxTotalBytes = maxTotalBytes;
+            this.maxConcurrent = maxConcurrent;
+            this.tempDir = tempDir;
+            this.acquireTimeoutMs = acquireTimeoutMs;
+            this.memory = new ByteArrayOutputStream(Math.min(64 * 1024, Math.max(256, memoryLimit)));
+        }
+
+        /** Takes the classloader-wide materialization permit before buffering. */
+        void begin() {
+            lease = RequestSpoolLimiter.getInstance().acquire(maxConcurrent, maxTotalBytes, acquireTimeoutMs);
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            write(new byte[] { (byte) b }, 0, 1);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            if (len <= 0) {
+                return;
+            }
+            if (lease == null) {
+                throw new IOException("Request body materialization lease was not acquired");
+            }
+            ensureSpoolBudget(len);
+            ensureCapacity(len);
+            lease.addBytes(len);
+            if (fileOut != null) {
+                fileOut.write(b, off, len);
+            } else {
+                memory.write(b, off, len);
+            }
+            size += len;
+        }
+
+        private void ensureCapacity(int incoming) throws IOException {
+            if (fileOut != null || memory == null) {
+                return;
+            }
+            if ((long) memory.size() + incoming <= memoryLimit) {
+                return;
+            }
+
+            try {
+                if (tempDir != null) {
+                    tempFile = Files.createTempFile(tempDir.toPath(), "opencmis-http-body-", ".bin").toFile();
+                } else {
+                    tempFile = Files.createTempFile("opencmis-http-body-", ".bin").toFile();
+                }
+                // deleteOnExit only on failed delete — not on create (avoids JVM heap growth).
+                fileOut = new BufferedOutputStream(new FileOutputStream(tempFile), 64 * 1024);
+                // Memory bytes were already charged via addBytes while writing.
+                memory.writeTo(fileOut);
+                fileOut.flush();
+                if (FORCE_SPILL_FAILURE_FOR_TESTS.get()) {
+                    throw new IOException("forced spill failure for tests");
+                }
+                memory = null;
+            } catch (IOException | RuntimeException e) {
+                IOUtils.closeQuietly(fileOut);
+                fileOut = null;
+                if (tempFile != null) {
+                    if (!deleteTempFile()) {
+                        // Keep tempFile so discard() can treat the orphan as undeleted.
+                    } else {
+                        tempFile = null;
+                    }
+                }
+                throw e instanceof IOException ? (IOException) e : new IOException(e);
+            }
+        }
+
+        private void ensureSpoolBudget(long additional) {
+            if (maxSpoolSize > 0 && size + additional > maxSpoolSize) {
+                throw new CmisConnectionException(
+                        "HTTP request body materialization size exceeded (max " + maxSpoolSize + " bytes)");
+            }
+        }
+
+        void finish() throws IOException {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            if (fileOut != null) {
+                fileOut.flush();
+                fileOut.close();
+                fileOut = null;
+            }
+        }
+
+        void discard() {
+            IOUtils.closeQuietly(fileOut);
+            fileOut = null;
+            memory = null;
+            boolean deleted = true;
+            if (tempFile != null) {
+                deleted = deleteTempFile();
+                if (deleted) {
+                    tempFile = null;
+                }
+            }
+            if (lease != null && !leaseTransferred) {
+                if (deleted) {
+                    lease.release();
+                } else {
+                    lease.releasePermitKeepBytes();
+                }
+                lease = null;
+            }
+        }
+
+        /**
+         * @return {@code true} if the temp file is gone (or was never present)
+         */
+        private boolean deleteTempFile() {
+            if (tempFile == null) {
+                return true;
+            }
+            if (FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get()) {
+                tempFile.deleteOnExit();
+                return false;
+            }
+            if (!tempFile.exists()) {
+                return true;
+            }
+            if (tempFile.delete()) {
+                return true;
+            }
+            tempFile.deleteOnExit();
+            return false;
+        }
+
+        File getTempFile() {
+            return tempFile;
+        }
+
+        HttpEntity toEntity(ContentType contentType) {
+            if (tempFile != null) {
+                return new FileEntity(tempFile, contentType);
+            }
+            byte[] data = memory == null ? new byte[0] : memory.toByteArray();
+            return new ByteArrayEntity(data, contentType);
+        }
+
+        long getSize() {
+            return size;
+        }
+
+        RequestSpoolLimiter.SpoolLease transferLease() {
+            if (lease != null && !leaseTransferred) {
+                leaseTransferred = true;
+                return lease;
+            }
+            return null;
+        }
+    }
+
+    /** Test-only: force spill-to-disk to fail after the temp file is created. */
+    static final AtomicBoolean FORCE_SPILL_FAILURE_FOR_TESTS = new AtomicBoolean();
+
+    /** Test-only: force temp-file delete to fail. */
+    static final AtomicBoolean FORCE_TEMP_DELETE_FAILURE_FOR_TESTS = new AtomicBoolean();
 }

@@ -98,10 +98,7 @@ public abstract class AbstractTckIT extends AbstractRunner {
         // (Browser/WebServices otherwise risk empty cmis:createdBy values).
         parameters.put(SessionParameter.AUTH_HTTP_BASIC, "true");
         parameters.put(SessionParameter.AUTH_SOAP_USERNAMETOKEN, "true");
-        // FIT against embedded Tomcat: prefer JDK invoker until HC5 request
-        // lifecycle is fully hardened for high-churn TCK sessions.
-        parameters.put(SessionParameter.HTTP_INVOKER_CLASS,
-                "org.apache.chemistry.opencmis.client.bindings.spi.http.DefaultHttpInvoker");
+        // Use the library default Apache HttpClient 5 invoker (pool + eager buffer).
 
         if (usesVersionableDocumentType()) {
             parameters.put(TestParameters.DEFAULT_DOCUMENT_TYPE,

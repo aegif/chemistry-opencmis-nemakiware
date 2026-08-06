@@ -21,6 +21,7 @@ package org.apache.chemistry.opencmis.client.bindings.spi.http;
 import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNullOrEmpty;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -117,7 +118,10 @@ public class Response {
                         errorContent = sb.toString();
                     } catch (IOException e) {
                         errorContent = "Unable to retrieve content: " + e.getMessage();
+                        IOUtils.closeQuietly(errorStream);
                     }
+                } else {
+                    IOUtils.closeQuietly(errorStream);
                 }
             } else {
                 IOUtils.closeQuietly(errorStream);
@@ -141,15 +145,24 @@ public class Response {
 
         if (stream == null || BigInteger.ZERO.equals(length) || responseCode == 204) {
             hasResponseStream = false;
+            // Release any pooled HTTP connection, but keep a non-null empty stream so
+            // callers that expect getStream()!=null for zero-length content keep working.
+            IOUtils.closeQuietly(stream);
+            stream = new ByteArrayInputStream(new byte[0]);
         } else {
             stream = new BufferedInputStream(stream, 64 * 1024);
             try {
                 hasResponseStream = IOUtils.checkForBytes(stream);
             } catch (IOException ioe) {
+                IOUtils.closeQuietly(stream);
+                stream = null;
                 throw new CmisConnectionException("IO exception!", ioe);
             }
 
-            if (hasResponseStream) {
+            if (!hasResponseStream) {
+                IOUtils.closeQuietly(stream);
+                stream = new ByteArrayInputStream(new byte[0]);
+            } else {
                 String encoding = getContentEncoding();
                 if (encoding != null) {
                     String encLower = encoding.trim().toLowerCase(Locale.ENGLISH);

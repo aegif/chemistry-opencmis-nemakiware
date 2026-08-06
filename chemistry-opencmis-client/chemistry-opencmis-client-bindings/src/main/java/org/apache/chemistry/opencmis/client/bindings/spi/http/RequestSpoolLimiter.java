@@ -30,10 +30,11 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
  * Classloader-wide limits for HTTP request-body materialization (heap and/or
  * disk).
  * <p>
- * A permit is required before any request body bytes are buffered, not only
- * when spilling to disk. The first successful acquire locks
- * {@code maxConcurrent} and {@code maxTotalBytes} for this classloader. Later
- * acquires that request different values are rejected.
+ * A concurrency permit is required while body bytes are being buffered. After
+ * materialization finishes, the permit can be released while the byte budget
+ * remains charged until the temp file / heap buffer is discarded. The first
+ * successful acquire locks {@code maxConcurrent} and {@code maxTotalBytes} for
+ * this classloader. Later acquires that request different values are rejected.
  * <p>
  * Note: a {@code static} singleton is shared only among code that loads this
  * class through the same classloader (for example one web application). It is
@@ -165,27 +166,35 @@ final class RequestSpoolLimiter {
         }
     }
 
-    private void releaseLease(Semaphore semaphore, long bytesAccounted, boolean releaseBytes) {
-        if (bytesAccounted > 0) {
-            if (releaseBytes) {
-                activeBytes.addAndGet(-bytesAccounted);
-            } else {
-                orphanedBytes.addAndGet(bytesAccounted);
-            }
-        }
+    private void releasePermit(Semaphore semaphore) {
         activeMaterializations.decrementAndGet();
         semaphore.release();
     }
 
+    private void subtractBytes(long bytesAccounted) {
+        if (bytesAccounted > 0) {
+            activeBytes.addAndGet(-bytesAccounted);
+        }
+    }
+
+    private void markOrphaned(long bytesAccounted) {
+        if (bytesAccounted > 0) {
+            orphanedBytes.addAndGet(bytesAccounted);
+        }
+    }
+
     /**
      * Holds the semaphore acquired for a materialization so release always
-     * targets the same instance.
+     * targets the same instance. The concurrency permit and byte budget can be
+     * released independently so networking can proceed without blocking other
+     * materializations.
      */
     static final class SpoolLease {
         private final RequestSpoolLimiter limiter;
         private final Semaphore semaphore;
         private final AtomicLong accountedBytes = new AtomicLong();
-        private final AtomicBoolean released = new AtomicBoolean();
+        private final AtomicBoolean permitReleased = new AtomicBoolean();
+        private final AtomicBoolean bytesReleased = new AtomicBoolean();
 
         SpoolLease(RequestSpoolLimiter limiter, Semaphore semaphore) {
             this.limiter = limiter;
@@ -201,9 +210,37 @@ final class RequestSpoolLimiter {
             return accountedBytes.get();
         }
 
-        /** Releases the concurrency permit and subtracts accounted bytes. */
+        /** Releases only the concurrency permit (bytes stay charged). */
+        void releasePermitOnly() {
+            if (!permitReleased.compareAndSet(false, true)) {
+                return;
+            }
+            limiter.releasePermit(semaphore);
+        }
+
+        /** Releases charged bytes after the materialized body is discarded. */
+        void releaseBytes() {
+            if (!bytesReleased.compareAndSet(false, true)) {
+                return;
+            }
+            limiter.subtractBytes(accountedBytes.getAndSet(0));
+        }
+
+        /**
+         * Marks charged bytes as orphaned (temp delete failed) without
+         * subtracting them from the active budget.
+         */
+        void abandonBytesAsOrphan() {
+            if (!bytesReleased.compareAndSet(false, true)) {
+                return;
+            }
+            limiter.markOrphaned(accountedBytes.getAndSet(0));
+        }
+
+        /** Full successful cleanup: permit + bytes. */
         void release() {
-            releaseInternal(true);
+            releasePermitOnly();
+            releaseBytes();
         }
 
         /**
@@ -211,14 +248,8 @@ final class RequestSpoolLimiter {
          * (temp file delete failed; disk still holds the data).
          */
         void releasePermitKeepBytes() {
-            releaseInternal(false);
-        }
-
-        private void releaseInternal(boolean releaseBytes) {
-            if (!released.compareAndSet(false, true)) {
-                return;
-            }
-            limiter.releaseLease(semaphore, accountedBytes.getAndSet(0), releaseBytes);
+            releasePermitOnly();
+            abandonBytesAsOrphan();
         }
     }
 }

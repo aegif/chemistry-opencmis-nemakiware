@@ -298,13 +298,16 @@ package org.apache.chemistry.opencmis.commons;
  * <tr>
  * <td>{@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT}</td>
  * <td>Max concurrent request-body materializations (heap and/or disk)
- * classloader-wide (Apache HttpClient 5). Locked by the first body
- * materialization; later sessions with a different value are rejected. Not a
- * multi-webapp JVM/host limit unless OpenCMIS is on a shared classloader.</td>
+ * classloader-wide (Apache HttpClient 5). The concurrency permit is held only
+ * while the body is being buffered; after materialization the permit is
+ * released and only the byte budget remains charged through HTTP send /
+ * cleanup. Locked by the first body materialization; later sessions with a
+ * different value are rejected. Not a multi-webapp JVM/host limit unless
+ * OpenCMIS is on a shared classloader.</td>
  * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
  * <td>positive integer</td>
  * <td>no</td>
- * <td>8</td>
+ * <td>32</td>
  * </tr>
  * <tr>
  * <td>{@link #HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES}</td>

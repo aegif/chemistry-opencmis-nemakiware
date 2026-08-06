@@ -97,10 +97,10 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     /** Default max size of a single spilled request body on disk. */
     public static final long DEFAULT_REQUEST_SPOOL_MAX_SIZE = 5L * 1024 * 1024 * 1024;
 
-    /** Default max concurrent disk-spooled request bodies process-wide. */
-    public static final int DEFAULT_REQUEST_SPOOL_MAX_CONCURRENT = 8;
+    /** Default max concurrent request-body materializations classloader-wide. */
+    public static final int DEFAULT_REQUEST_SPOOL_MAX_CONCURRENT = 32;
 
-    /** Default max total bytes across all active disk spools process-wide. */
+    /** Default max total bytes across all active materialized bodies classloader-wide. */
     public static final long DEFAULT_REQUEST_SPOOL_MAX_TOTAL_BYTES = 20L * 1024 * 1024 * 1024;
 
     /** Default wait for a free pooled connection (never block forever under load). */
@@ -262,6 +262,10 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                         session);
                 requestTempFile = prepared.tempFile;
                 requestSpoolLease = prepared.spoolLease;
+                // Allow other bodies to materialize while this request is on the wire.
+                if (requestSpoolLease != null) {
+                    requestSpoolLease.releasePermitOnly();
+                }
                 request.setEntity(prepared.entity);
             }
 
@@ -337,9 +341,9 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             }
             if (requestSpoolLease != null) {
                 if (tempDeleted) {
-                    requestSpoolLease.release();
+                    requestSpoolLease.releaseBytes();
                 } else {
-                    requestSpoolLease.releasePermitKeepBytes();
+                    requestSpoolLease.abandonBytesAsOrphan();
                 }
             }
         }
@@ -348,16 +352,26 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     /**
      * Builds a request entity by spooling to memory then optionally to a temp
      * file under classloader-wide concurrency and size limits. A materialization
-     * permit is taken before any body bytes are buffered. Always produces a
-     * known Content-Length with a repeatable entity (byte array or file) so
-     * keep-alive connections stay consistent even when writers are one-shot or
-     * HttpClient retries.
+     * permit is taken before any body bytes are buffered and released as soon as
+     * materialization finishes, so HTTP networking does not block other uploads.
+     * Byte budget remains charged until the body is discarded. Always produces a
+     * known Content-Length with a repeatable entity (byte array or file).
      */
     protected PreparedRequestBody prepareRequestBody(final Output writer, final boolean gzip,
             final ContentType entityContentType, BindingSession session) throws IOException {
         RequestBodySpool spool = spoolRequestBody(writer, gzip, session);
-        return new PreparedRequestBody(spool.toEntity(entityContentType), spool.getTempFile(),
-                spool.transferLease());
+        try {
+            HttpEntity entity = spool.toEntity(entityContentType);
+            File tempFile = spool.getTempFile();
+            RequestSpoolLimiter.SpoolLease lease = spool.transferLease();
+            return new PreparedRequestBody(entity, tempFile, lease);
+        } catch (RuntimeException ex) {
+            spool.discard();
+            throw ex;
+        } catch (Error err) {
+            spool.discard();
+            throw err;
+        }
     }
 
     /**
@@ -614,7 +628,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         private final int maxConcurrent;
         private final File tempDir;
         private final long acquireTimeoutMs;
-        private ByteArrayOutputStream memory;
+        private TransferByteArrayOutputStream memory;
         private File tempFile;
         private OutputStream fileOut;
         private long size;
@@ -630,7 +644,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             this.maxConcurrent = maxConcurrent;
             this.tempDir = tempDir;
             this.acquireTimeoutMs = acquireTimeoutMs;
-            this.memory = new ByteArrayOutputStream(Math.min(64 * 1024, Math.max(256, memoryLimit)));
+            this.memory = new TransferByteArrayOutputStream(Math.min(64 * 1024, Math.max(256, memoryLimit)));
         }
 
         /** Takes the classloader-wide materialization permit before buffering. */
@@ -768,7 +782,8 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             if (tempFile != null) {
                 return new FileEntity(tempFile, contentType);
             }
-            byte[] data = memory == null ? new byte[0] : memory.toByteArray();
+            byte[] data = memory == null ? new byte[0] : memory.takeBuffer();
+            memory = null;
             return new ByteArrayEntity(data, contentType);
         }
 
@@ -790,4 +805,24 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
     /** Test-only: force temp-file delete to fail. */
     static final AtomicBoolean FORCE_TEMP_DELETE_FAILURE_FOR_TESTS = new AtomicBoolean();
+
+    /**
+     * ByteArrayOutputStream that can hand off its buffer without an extra copy
+     * when the buffer is exactly full.
+     */
+    private static final class TransferByteArrayOutputStream extends ByteArrayOutputStream {
+        TransferByteArrayOutputStream(int size) {
+            super(size);
+        }
+
+        synchronized byte[] takeBuffer() {
+            if (count == buf.length) {
+                byte[] exact = buf;
+                buf = new byte[0];
+                count = 0;
+                return exact;
+            }
+            return toByteArray();
+        }
+    }
 }

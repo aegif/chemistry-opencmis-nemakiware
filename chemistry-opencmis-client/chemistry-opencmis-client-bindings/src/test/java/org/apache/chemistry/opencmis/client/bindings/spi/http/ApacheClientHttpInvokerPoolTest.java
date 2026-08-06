@@ -362,18 +362,66 @@ public class ApacheClientHttpInvokerPoolTest {
     @Test
     public void concurrentSpoolLimitIsEnforced() throws Exception {
         File tempDir = Files.createTempDirectory("opencmis-spool-limit-").toFile();
-        final CountDownLatch firstSpoolReady = new CountDownLatch(1);
+        final CountDownLatch firstWriting = new CountDownLatch(1);
         final CountDownLatch releaseFirst = new CountDownLatch(1);
 
+        try {
+            ServerHandle server = startDrainUploadServer();
+
+            BindingSession session = new SessionImpl();
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            executors.add(pool);
+            try {
+                session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
+                session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
+                session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(1), true);
+                session.put(SessionParameter.HTTP_CONNECTION_REQUEST_TIMEOUT, Integer.valueOf(500), true);
+
+                final ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+                final UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
+                final Output heldBody = holdingOutput(8, 4096, (byte) 'L', firstWriting, releaseFirst);
+
+                Future<Response> first = pool.submit(() -> invoker.invokePOST(url, "application/octet-stream", heldBody,
+                        session));
+                assertTrue(firstWriting.await(5, TimeUnit.SECONDS));
+                assertEquals(1, RequestSpoolLimiter.getInstance().getActiveSpools());
+
+                assertThrows(CmisConnectionException.class,
+                        () -> invoker.invokePOST(url, "application/octet-stream",
+                                fillingOutput(8, 4096, (byte) 'L'), session));
+
+                releaseFirst.countDown();
+                assertEquals(201, first.get(10, TimeUnit.SECONDS).getResponseCode());
+                assertEquals(0, RequestSpoolLimiter.getInstance().getActiveSpools());
+                assertEquals(0, RequestSpoolLimiter.getInstance().getActiveBytes());
+            } finally {
+                releaseFirst.countDown();
+                HttpInvokerSessionResources.close(session);
+                server.stop();
+            }
+        } finally {
+            deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void materializationPermitReleasedDuringHttpRoundTrip() throws Exception {
+        File tempDir = Files.createTempDirectory("opencmis-permit-early-").toFile();
+        final CountDownLatch firstOnWire = new CountDownLatch(1);
+        final CountDownLatch releaseFirst = new CountDownLatch(1);
+        final AtomicLong requestCount = new AtomicLong();
         try {
             ServerHandle server = startServer("/upload", new HttpHandler() {
                 @Override
                 public void handle(HttpExchange exchange) throws IOException {
-                    firstSpoolReady.countDown();
-                    try {
-                        releaseFirst.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                    long n = requestCount.getAndIncrement();
+                    if (n == 0) {
+                        firstOnWire.countDown();
+                        try {
+                            releaseFirst.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
                     drain(exchange.getRequestBody());
                     exchange.sendResponseHeaders(201, -1);
@@ -388,21 +436,27 @@ public class ApacheClientHttpInvokerPoolTest {
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(1), true);
-                session.put(SessionParameter.HTTP_CONNECTION_REQUEST_TIMEOUT, Integer.valueOf(500), true);
+                session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES, Long.valueOf(64 * 1024 * 1024), true);
 
-                final ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
-                final UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
-                final Output bigBody = fillingOutput(8, 4096, (byte) 'L');
+                ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+                UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
+                Output body = fillingOutput(8, 4096, (byte) 'P');
 
-                Future<Response> first = pool.submit(() -> invoker.invokePOST(url, "application/octet-stream", bigBody,
-                        session));
-                assertTrue(firstSpoolReady.await(5, TimeUnit.SECONDS));
+                Future<Response> first = pool
+                        .submit(() -> invoker.invokePOST(url, "application/octet-stream", body, session));
+                assertTrue(firstOnWire.await(5, TimeUnit.SECONDS));
+                assertEquals(0, RequestSpoolLimiter.getInstance().getActiveSpools(),
+                        "concurrency permit must be free while request is on the wire");
+                assertTrue(RequestSpoolLimiter.getInstance().getActiveBytes() > 0,
+                        "byte budget must remain charged until cleanup");
 
-                assertThrows(CmisConnectionException.class,
-                        () -> invoker.invokePOST(url, "application/octet-stream", bigBody, session));
+                // Second materialization must proceed even with maxConcurrent=1.
+                assertEquals(201, invoker.invokePOST(url, "application/octet-stream", body, session).getResponseCode());
 
                 releaseFirst.countDown();
                 assertEquals(201, first.get(10, TimeUnit.SECONDS).getResponseCode());
+                assertEquals(0, RequestSpoolLimiter.getInstance().getActiveSpools());
+                assertEquals(0, RequestSpoolLimiter.getInstance().getActiveBytes());
             } finally {
                 releaseFirst.countDown();
                 HttpInvokerSessionResources.close(session);
@@ -417,22 +471,9 @@ public class ApacheClientHttpInvokerPoolTest {
     public void conflictingProcessWideSpoolLimitsAreRejected() throws Exception {
         File tempDir = Files.createTempDirectory("opencmis-conflict-limits-").toFile();
         final CountDownLatch hold = new CountDownLatch(1);
-        final CountDownLatch firstHeld = new CountDownLatch(1);
+        final CountDownLatch firstWriting = new CountDownLatch(1);
         try {
-            ServerHandle server = startServer("/upload", new HttpHandler() {
-                @Override
-                public void handle(HttpExchange exchange) throws IOException {
-                    firstHeld.countDown();
-                    try {
-                        hold.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    drain(exchange.getRequestBody());
-                    exchange.sendResponseHeaders(201, -1);
-                    exchange.close();
-                }
-            });
+            ServerHandle server = startDrainUploadServer();
 
             BindingSession sessionMax1 = new SessionImpl();
             BindingSession sessionMax2 = new SessionImpl();
@@ -451,15 +492,16 @@ public class ApacheClientHttpInvokerPoolTest {
 
                 ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
                 UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
-                Output body = fillingOutput(4, 4096, (byte) 'M');
+                Output heldBody = holdingOutput(4, 4096, (byte) 'M', firstWriting, hold);
 
                 Future<Response> first = pool
-                        .submit(() -> invoker.invokePOST(url, "application/octet-stream", body, sessionMax1));
-                assertTrue(firstHeld.await(5, TimeUnit.SECONDS));
+                        .submit(() -> invoker.invokePOST(url, "application/octet-stream", heldBody, sessionMax1));
+                assertTrue(firstWriting.await(5, TimeUnit.SECONDS));
                 assertEquals(Integer.valueOf(1), RequestSpoolLimiter.getInstance().getLockedMaxConcurrentForTests());
 
                 CmisConnectionException conflict = assertThrows(CmisConnectionException.class,
-                        () -> invoker.invokePOST(url, "application/octet-stream", body, sessionMax2));
+                        () -> invoker.invokePOST(url, "application/octet-stream", fillingOutput(4, 4096, (byte) 'M'),
+                                sessionMax2));
                 assertTrue(conflict.getMessage().contains("limits already set"));
 
                 hold.countDown();
@@ -511,21 +553,8 @@ public class ApacheClientHttpInvokerPoolTest {
     @Test
     public void memoryOnlyMaterializationConcurrentLimitIsEnforced() throws Exception {
         final CountDownLatch hold = new CountDownLatch(1);
-        final CountDownLatch firstReady = new CountDownLatch(1);
-        ServerHandle server = startServer("/upload", new HttpHandler() {
-            @Override
-            public void handle(HttpExchange exchange) throws IOException {
-                firstReady.countDown();
-                try {
-                    hold.await(10, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                drain(exchange.getRequestBody());
-                exchange.sendResponseHeaders(201, -1);
-                exchange.close();
-            }
-        });
+        final CountDownLatch firstWriting = new CountDownLatch(1);
+        ServerHandle server = startDrainUploadServer();
 
         BindingSession session = new SessionImpl();
         ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -539,14 +568,16 @@ public class ApacheClientHttpInvokerPoolTest {
 
             ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
             UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
-            Output smallBody = fillingOutput(1, 1024, (byte) 'm');
+            Output heldBody = holdingOutput(1, 1024, (byte) 'm', firstWriting, hold);
 
             Future<Response> first = pool
-                    .submit(() -> invoker.invokePOST(url, "application/octet-stream", smallBody, session));
-            assertTrue(firstReady.await(5, TimeUnit.SECONDS));
+                    .submit(() -> invoker.invokePOST(url, "application/octet-stream", heldBody, session));
+            assertTrue(firstWriting.await(5, TimeUnit.SECONDS));
+            assertEquals(1, RequestSpoolLimiter.getInstance().getActiveSpools());
 
             assertThrows(CmisConnectionException.class,
-                    () -> invoker.invokePOST(url, "application/octet-stream", smallBody, session));
+                    () -> invoker.invokePOST(url, "application/octet-stream", fillingOutput(1, 1024, (byte) 'm'),
+                            session));
 
             hold.countDown();
             assertEquals(201, first.get(10, TimeUnit.SECONDS).getResponseCode());
@@ -800,22 +831,9 @@ public class ApacheClientHttpInvokerPoolTest {
     public void negativeConnectionRequestTimeoutDoesNotBlockSpoolForever() throws Exception {
         File tempDir = Files.createTempDirectory("opencmis-timeout-norm-").toFile();
         final CountDownLatch hold = new CountDownLatch(1);
-        final CountDownLatch firstReady = new CountDownLatch(1);
+        final CountDownLatch firstWriting = new CountDownLatch(1);
         try {
-            ServerHandle server = startServer("/upload", new HttpHandler() {
-                @Override
-                public void handle(HttpExchange exchange) throws IOException {
-                    firstReady.countDown();
-                    try {
-                        hold.await(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    drain(exchange.getRequestBody());
-                    exchange.sendResponseHeaders(201, -1);
-                    exchange.close();
-                }
-            });
+            ServerHandle server = startDrainUploadServer();
 
             BindingSession session = new SessionImpl();
             ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -830,15 +848,16 @@ public class ApacheClientHttpInvokerPoolTest {
 
                 ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
                 UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
-                Output body = fillingOutput(4, 1024, (byte) 'W');
+                Output heldBody = holdingOutput(4, 1024, (byte) 'W', firstWriting, hold);
 
                 Future<Response> first = pool
-                        .submit(() -> invoker.invokePOST(url, "application/octet-stream", body, session));
-                assertTrue(firstReady.await(5, TimeUnit.SECONDS));
+                        .submit(() -> invoker.invokePOST(url, "application/octet-stream", heldBody, session));
+                assertTrue(firstWriting.await(5, TimeUnit.SECONDS));
 
                 long started = System.nanoTime();
                 assertThrows(CmisConnectionException.class,
-                        () -> invoker.invokePOST(url, "application/octet-stream", body, session));
+                        () -> invoker.invokePOST(url, "application/octet-stream", fillingOutput(4, 1024, (byte) 'W'),
+                                session));
                 long waitedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
                 assertTrue(waitedMs < 5000, "spool wait with -1 must not block indefinitely, waitedMs=" + waitedMs);
 
@@ -973,6 +992,17 @@ public class ApacheClientHttpInvokerPoolTest {
         }
     }
 
+    private ServerHandle startDrainUploadServer() throws IOException {
+        return startServer("/upload", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                drain(exchange.getRequestBody());
+                exchange.sendResponseHeaders(201, -1);
+                exchange.close();
+            }
+        });
+    }
+
     private ServerHandle startPingServer() throws IOException {
         return startServer("/ping", new HttpHandler() {
             @Override
@@ -1018,6 +1048,32 @@ public class ApacheClientHttpInvokerPoolTest {
                 byte[] chunk = new byte[chunkSize];
                 Arrays.fill(chunk, fill);
                 for (int i = 0; i < chunks; i++) {
+                    out.write(chunk);
+                }
+            }
+        };
+    }
+
+    /**
+     * Writes the first chunk, signals {@code writing}, waits for {@code release},
+     * then writes any remaining chunks. Used to hold a materialization permit.
+     */
+    private static Output holdingOutput(final int chunks, final int chunkSize, final byte fill,
+            final CountDownLatch writing, final CountDownLatch release) {
+        return new Output() {
+            @Override
+            public void write(OutputStream out) throws Exception {
+                byte[] chunk = new byte[chunkSize];
+                Arrays.fill(chunk, fill);
+                if (chunks > 0) {
+                    out.write(chunk);
+                    out.flush();
+                }
+                writing.countDown();
+                if (!release.await(10, TimeUnit.SECONDS)) {
+                    throw new IOException("holdingOutput release latch timed out");
+                }
+                for (int i = 1; i < chunks; i++) {
                     out.write(chunk);
                 }
             }

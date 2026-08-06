@@ -175,14 +175,17 @@ HTTP invokers:
      bodies stream and must be closed by the caller
    - request bodies are materialized under classloader-wide limits before the
      HTTP connection is obtained (heap up to 1 MiB then temp file via
-     `...binding.http.requestmemorylimit`). Limits (first materialization in
+     `...binding.http.requestmemorylimit`). The concurrency permit is held
+     only during buffering; after materialization it is released so other
+     uploads can spool while this request is on the wire. Byte budget stays
+     charged until the body is discarded. Limits (first materialization in
      the classloader locks concurrent/total settings — later sessions with
      different values are rejected; not a multi-webapp host limit unless
      OpenCMIS is on a shared classloader):
      - temp dir: `...binding.http.tempdir` (JVM default temp dir)
      - max per request body (heap and/or disk): 5 GiB
        (`...binding.http.requestspoolmaxsize`)
-     - max concurrent materializations: 8
+     - max concurrent materializations: 32
        (`...binding.http.requestspoolmaxconcurrent`)
      - max total active body bytes (heap + disk): 20 GiB
        (`...binding.http.requestspoolmaxtotalbytes`)

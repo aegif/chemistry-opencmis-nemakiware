@@ -52,8 +52,8 @@
         </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
-            <artifactId>antlr-runtime</artifactId>
-            <version>${antlr3.version}</version>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>${antlr4.version}</version>
         </dependency>
         <dependency>
             <groupId>jakarta.servlet</groupId>
@@ -76,52 +76,20 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>target/generated-resources</directory>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.antlr</groupId>
-                <artifactId>antlr3-maven-plugin</artifactId>
-                <version>${antlr3.version}</version>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>${antlr4.version}</version>
                 <configuration>
-                    <excludes>
-                        <exclude>**/CmisBase*.g</exclude>
-                        <exclude>**/Java*.g</exclude>
-                    </excludes>
+                    <listener>false</listener>
+                    <visitor>false</visitor>
                 </configuration>
                 <executions>
                     <execution>
-                        <!-- default phase: process-sources -->
-                        <phase>generate-sources</phase>
                         <goals>
-                            <goal>antlr</goal>
+                            <goal>antlr4</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>generate-resources</phase> <!-- after process-sources -->
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <resources>
-                                <resource>
-                                    <directory>target/generated-sources/antlr3</directory>
-                                    <includes>
-                                        <!-- don't include lexer tokens, which are identical -->
-                                        <include>*Parser.tokens</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                            <outputDirectory>target/generated-resources/org/apache/chemistry/opencmis/server/support/query</outputDirectory>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

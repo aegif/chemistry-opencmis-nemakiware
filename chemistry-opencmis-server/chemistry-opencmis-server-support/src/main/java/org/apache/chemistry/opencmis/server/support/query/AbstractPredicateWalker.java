@@ -24,7 +24,6 @@ package org.apache.chemistry.opencmis.server.support.query;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.antlr.runtime.tree.Tree;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 
 /**
@@ -35,7 +34,7 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
 public abstract class AbstractPredicateWalker implements PredicateWalker {
 
     @Override
-    public Boolean walkPredicate(Tree node) {
+    public Boolean walkPredicate(CmisTree node) {
         switch (node.getType()) {
         case CmisQlStrictLexer.NOT:
             return walkNot(node, node.getChild(0));
@@ -121,32 +120,32 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
 
 
     /** For extensibility. */
-    protected Boolean walkOtherPredicate(Tree node) {
+    protected Boolean walkOtherPredicate(CmisTree node) {
         throw new CmisRuntimeException("Unknown node type: " + node.getType() + " (" + node.getText() + ")");
     }
 
     @Override
-    public Boolean walkNot(Tree opNode, Tree node) {
+    public Boolean walkNot(CmisTree opNode, CmisTree node) {
         walkPredicate(node);
         return false;
     }
 
     @Override
-    public Boolean walkAnd(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkPredicate(leftNode);
         walkPredicate(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkOr(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkPredicate(leftNode);
         walkPredicate(rightNode);
         return false;
     }
 
     @Override
-    public Object walkExpr(Tree node) {
+    public Object walkExpr(CmisTree node) {
         switch (node.getType()) {
         case CmisQlStrictLexer.BOOL_LIT:
             return walkBoolean(node);
@@ -167,7 +166,7 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
         }
     }
 
-    public Boolean walkSearchExpr(Tree node) {
+    public Boolean walkSearchExpr(CmisTree node) {
         switch (node.getType()) {
         case TextSearchLexer.TEXT_AND:
             return walkTextAnd(node);
@@ -186,115 +185,115 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     /** For extensibility. */
-    protected Object walkOtherExpr(Tree node) {
+    protected Object walkOtherExpr(CmisTree node) {
         throw new CmisRuntimeException("Unknown node type: " + node.getType() + " (" + node.getText() + ")");
     }
 
     @Override
-    public Boolean walkEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkExpr(leftNode);
         walkExpr(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkNotEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkNotEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkExpr(leftNode);
         walkExpr(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkGreaterThan(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkGreaterThan(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkExpr(leftNode);
         walkExpr(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkGreaterOrEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkGreaterOrEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkExpr(leftNode);
         walkExpr(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkLessThan(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkLessThan(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkExpr(leftNode);
         walkExpr(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkLessOrEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+    public Boolean walkLessOrEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
         walkExpr(leftNode);
         walkExpr(rightNode);
         return false;
     }
 
     @Override
-    public Boolean walkIn(Tree opNode, Tree colNode, Tree listNode) {
+    public Boolean walkIn(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
         walkExpr(colNode);
         walkExpr(listNode);
         return false;
     }
 
     @Override
-    public Boolean walkNotIn(Tree opNode, Tree colNode, Tree listNode) {
+    public Boolean walkNotIn(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
         walkExpr(colNode);
         walkExpr(listNode);
         return false;
     }
 
     @Override
-    public Boolean walkInAny(Tree opNode, Tree colNode, Tree listNode) {
+    public Boolean walkInAny(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
         walkExpr(colNode);
         walkExpr(listNode);
         return false;
     }
 
     @Override
-    public Boolean walkNotInAny(Tree opNode, Tree colNode, Tree listNode) {
+    public Boolean walkNotInAny(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
         walkExpr(colNode);
         walkExpr(listNode);
         return false;
     }
 
     @Override
-    public Boolean walkEqAny(Tree opNode, Tree literalNode, Tree colNode) {
+    public Boolean walkEqAny(CmisTree opNode, CmisTree literalNode, CmisTree colNode) {
         walkExpr(literalNode);
         walkExpr(colNode);
         return false;
     }
 
     @Override
-    public Boolean walkIsNull(Tree opNode, Tree colNode) {
+    public Boolean walkIsNull(CmisTree opNode, CmisTree colNode) {
         walkExpr(colNode);
         return false;
     }
 
     @Override
-    public Boolean walkIsNotNull(Tree opNode, Tree colNode) {
+    public Boolean walkIsNotNull(CmisTree opNode, CmisTree colNode) {
         walkExpr(colNode);
         return false;
     }
 
     @Override
-    public Boolean walkLike(Tree opNode, Tree colNode, Tree stringNode) {
-        walkExpr(colNode);
-        walkExpr(stringNode);
-        return false;
-    }
-
-    @Override
-    public Boolean walkNotLike(Tree opNode, Tree colNode, Tree stringNode) {
+    public Boolean walkLike(CmisTree opNode, CmisTree colNode, CmisTree stringNode) {
         walkExpr(colNode);
         walkExpr(stringNode);
         return false;
     }
 
     @Override
-    public Boolean walkContains(Tree opNode, Tree qualNode, Tree queryNode) {
+    public Boolean walkNotLike(CmisTree opNode, CmisTree colNode, CmisTree stringNode) {
+        walkExpr(colNode);
+        walkExpr(stringNode);
+        return false;
+    }
+
+    @Override
+    public Boolean walkContains(CmisTree opNode, CmisTree qualNode, CmisTree queryNode) {
         if (qualNode != null) {
             return walkSearchExpr(qualNode);
         }
@@ -302,7 +301,7 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     @Override
-    public Boolean walkInFolder(Tree opNode, Tree qualNode, Tree paramNode) {
+    public Boolean walkInFolder(CmisTree opNode, CmisTree qualNode, CmisTree paramNode) {
         if (qualNode != null) {
             walkExpr(qualNode);
         }
@@ -311,7 +310,7 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     @Override
-    public Boolean walkInTree(Tree opNode, Tree qualNode, Tree paramNode) {
+    public Boolean walkInTree(CmisTree opNode, CmisTree qualNode, CmisTree paramNode) {
         if (qualNode != null) {
             walkExpr(qualNode);
         }
@@ -320,7 +319,7 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     @Override
-    public Object walkList(Tree node) {
+    public Object walkList(CmisTree node) {
         int n = node.getChildCount();
         List<Object> res = new ArrayList<Object>(n);
         for (int i = 0; i < n; i++) {
@@ -330,13 +329,13 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     @Override
-    public Object walkBoolean(Tree node) {
+    public Object walkBoolean(CmisTree node) {
         String s = node.getText();
         return Boolean.valueOf(s);
     }
 
     @Override
-    public Object walkNumber(Tree node) {
+    public Object walkNumber(CmisTree node) {
         String s = node.getText();
         if (s.contains(".") || s.contains("e") || s.contains("E")) {
             return Double.valueOf(s);
@@ -346,7 +345,7 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     @Override
-    public Object walkString(Tree node) {
+    public Object walkString(CmisTree node) {
         String s = node.getText();
         s = s.substring(1, s.length() - 1);
         s = s.replace("''", "'"); // unescape quotes
@@ -354,43 +353,43 @@ public abstract class AbstractPredicateWalker implements PredicateWalker {
     }
 
     @Override
-    public Object walkTimestamp(Tree node) {
+    public Object walkTimestamp(CmisTree node) {
         String s = node.getText();
         s = s.substring(s.indexOf('\'') + 1, s.length() - 1);
         return CalendarHelper.fromString(s);
     }
 
     @Override
-    public Object walkCol(Tree node) {
+    public Object walkCol(CmisTree node) {
         return null;
     }
 
     @Override
-    public Object walkId(Tree node) {
+    public Object walkId(CmisTree node) {
         return null;
     }
     
-    protected Boolean walkTextAnd(Tree node) {
+    protected Boolean walkTextAnd(CmisTree node) {
         return null;
     }
     
-    protected Boolean walkTextOr(Tree node) {
+    protected Boolean walkTextOr(CmisTree node) {
         return null;
     }
     
-    protected Boolean walkTextMinus(Tree node) {
+    protected Boolean walkTextMinus(CmisTree node) {
         return null;
     }
     
-    protected Boolean walkTextWord(Tree node) {
+    protected Boolean walkTextWord(CmisTree node) {
         return null;
     }
     
-    protected Boolean walkTextPhrase(Tree node) {
+    protected Boolean walkTextPhrase(CmisTree node) {
         return null;
     }
     
-    protected Boolean walkScore(Tree node) {
+    protected Boolean walkScore(CmisTree node) {
        return false;        
     }
 

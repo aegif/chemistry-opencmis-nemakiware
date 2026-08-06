@@ -21,7 +21,6 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import org.antlr.runtime.tree.Tree;
 
 /**
  * Interface for a tree walker of a WHERE clause.
@@ -33,62 +32,62 @@ import org.antlr.runtime.tree.Tree;
  */
 public interface PredicateWalker extends PredicateWalkerBase {
 
-    Boolean walkNot(Tree opNode, Tree leftNode);
+    Boolean walkNot(CmisTree opNode, CmisTree leftNode);
 
-    Boolean walkAnd(Tree opNode, Tree leftNode, Tree rightNode);
+    Boolean walkAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkOr(Tree opNode, Tree leftNode, Tree rightNode);
+    Boolean walkOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    Object walkExpr(Tree node);
+    Object walkExpr(CmisTree node);
 
-    Boolean walkEquals(Tree eqNode, Tree leftNode, Tree rightNode);
+    Boolean walkEquals(CmisTree eqNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkNotEquals(Tree neNode, Tree leftNode, Tree rightNode);
+    Boolean walkNotEquals(CmisTree neNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkGreaterThan(Tree gtNode, Tree leftNode, Tree rightNode);
+    Boolean walkGreaterThan(CmisTree gtNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkGreaterOrEquals(Tree geNode, Tree leftNode, Tree rightNode);
+    Boolean walkGreaterOrEquals(CmisTree geNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkLessThan(Tree ltNode, Tree leftNode, Tree rightNode);
+    Boolean walkLessThan(CmisTree ltNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkLessOrEquals(Tree leqNode, Tree leftNode, Tree rightNode);
+    Boolean walkLessOrEquals(CmisTree leqNode, CmisTree leftNode, CmisTree rightNode);
 
-    Boolean walkIn(Tree node, Tree colNode, Tree listNode);
+    Boolean walkIn(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    Boolean walkNotIn(Tree node, Tree colNode, Tree listNode);
+    Boolean walkNotIn(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    Boolean walkInAny(Tree node, Tree colNode, Tree listNode);
+    Boolean walkInAny(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    Boolean walkNotInAny(Tree node, Tree colNode, Tree listNode);
+    Boolean walkNotInAny(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    Boolean walkEqAny(Tree node, Tree literalNode, Tree colNode);
+    Boolean walkEqAny(CmisTree node, CmisTree literalNode, CmisTree colNode);
 
-    Boolean walkIsNull(Tree nullNode, Tree colNode);
+    Boolean walkIsNull(CmisTree nullNode, CmisTree colNode);
 
-    Boolean walkIsNotNull(Tree notNullNode, Tree colNode);
+    Boolean walkIsNotNull(CmisTree notNullNode, CmisTree colNode);
 
-    Boolean walkLike(Tree node, Tree colNode, Tree stringNode);
+    Boolean walkLike(CmisTree node, CmisTree colNode, CmisTree stringNode);
 
-    Boolean walkNotLike(Tree node, Tree colNode, Tree stringNode);
+    Boolean walkNotLike(CmisTree node, CmisTree colNode, CmisTree stringNode);
 
-    Boolean walkContains(Tree node, Tree qualNode, Tree paramNode);
+    Boolean walkContains(CmisTree node, CmisTree qualNode, CmisTree paramNode);
 
-    Boolean walkInFolder(Tree node, Tree qualNode, Tree paramNode);
+    Boolean walkInFolder(CmisTree node, CmisTree qualNode, CmisTree paramNode);
 
-    Boolean walkInTree(Tree node, Tree qualNode, Tree paramNode);
+    Boolean walkInTree(CmisTree node, CmisTree qualNode, CmisTree paramNode);
 
-    Object walkList(Tree node);
+    Object walkList(CmisTree node);
 
-    Object walkBoolean(Tree node);
+    Object walkBoolean(CmisTree node);
 
-    Object walkNumber(Tree node);
+    Object walkNumber(CmisTree node);
 
-    Object walkString(Tree node);
+    Object walkString(CmisTree node);
 
-    Object walkTimestamp(Tree node);
+    Object walkTimestamp(CmisTree node);
 
-    Object walkCol(Tree node);
+    Object walkCol(CmisTree node);
 
-    Object walkId(Tree node);
+    Object walkId(CmisTree node);
 
 }

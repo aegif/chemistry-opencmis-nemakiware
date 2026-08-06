@@ -18,17 +18,28 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
+import org.antlr.v4.runtime.RecognitionException;
 
 /**
- * Base interface for a tree walker of a WHERE clause.
- * <p>
- * COntains only a single method used by the ANTLR query walker to initiate a
- * tree walk for evaluating the query. You can inherit from this interface if
- * you want to have your own walking mechanism
- * </p>
+ * Thrown when CMIS query semantic predicates fail (e.g. type resolution),
+ * preserving ANTLR3 {@code FailedPredicateException} semantics for callers.
  */
-public interface PredicateWalkerBase {
+public class FailedPredicateException extends RecognitionException {
 
-    Boolean walkPredicate(CmisTree whereNode);
+    private static final long serialVersionUID = 1L;
 
+    public String predicateText;
+
+    public FailedPredicateException(String predicateText) {
+        super(predicateText == null ? "FailedPredicateException" : predicateText, null, null, null);
+        this.predicateText = predicateText;
+    }
+
+    @Override
+    public String toString() {
+        if (predicateText != null) {
+            return "FailedPredicateException(" + predicateText + ")";
+        }
+        return "FailedPredicateException";
+    }
 }

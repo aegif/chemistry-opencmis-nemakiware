@@ -28,8 +28,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.antlr.runtime.RecognitionException;
-import org.antlr.runtime.tree.Tree;
+import org.antlr.v4.runtime.RecognitionException;
+import org.apache.chemistry.opencmis.server.support.query.CmisTree;
 import org.apache.chemistry.opencmis.commons.definitions.TypeDefinition;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.inmemory.TypeManagerImpl;
@@ -56,7 +56,7 @@ public class QueryTypesTest extends AbstractQueryTest {
         List<Integer> ids = new LinkedList<Integer>();
 
         @Override
-        public Object walkId(Tree node) {
+        public Object walkId(CmisTree node) {
             ids.add(node.getTokenStartIndex());
             return null;
         }

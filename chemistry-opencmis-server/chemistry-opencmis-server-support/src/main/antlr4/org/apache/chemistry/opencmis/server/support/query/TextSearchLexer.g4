@@ -16,19 +16,38 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.chemistry.opencmis.server.support.query;
 
+lexer grammar TextSearchLexer;
 
-/**
- * Base interface for a tree walker of a WHERE clause.
- * <p>
- * COntains only a single method used by the ANTLR query walker to initiate a
- * tree walk for evaluating the query. You can inherit from this interface if
- * you want to have your own walking mechanism
- * </p>
- */
-public interface PredicateWalkerBase {
-
-    Boolean walkPredicate(CmisTree whereNode);
-
+tokens {
+    TEXT_AND,
+    TEXT_OR
 }
+
+AND : [Aa][Nn][Dd];
+OR : [Oo][Rr];
+TEXT_MINUS : '-';
+
+fragment QUOTE: '\'';
+fragment DOUBLE_QUOTE: '"';
+fragment BACKSL: '\\';
+
+fragment
+ESC
+    : BACKSL (QUOTE | DOUBLE_QUOTE | BACKSL | TEXT_MINUS | '*' | '?')
+    ;
+
+WS : [ \t\r\n]+ -> channel(HIDDEN);
+
+fragment
+TEXT_SEARCH_PHRASE_STRING
+    : ( ESC | ~[\\"\-'] )+
+    ;
+
+TEXT_SEARCH_PHRASE_STRING_LIT
+    : DOUBLE_QUOTE TEXT_SEARCH_PHRASE_STRING DOUBLE_QUOTE
+    ;
+
+TEXT_SEARCH_WORD_LIT
+    : ( ESC | ~[\\' \t\r\n\-] )+
+    ;

@@ -34,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import org.antlr.runtime.RecognitionException;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ObjectData;
 import org.apache.chemistry.opencmis.commons.data.ObjectList;
@@ -1022,10 +1021,11 @@ public class EvalQueryTest extends AbstractServiceTest {
         try {
         	doQuery(statement);
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("line 1:0 no viable alternative at input '<EOF>'"));
-            assertTrue(e instanceof CmisInvalidArgumentException);                   	
-            assertTrue(e.getCause() instanceof RuntimeException);                   	
-            assertTrue(e.getCause().getCause() instanceof RecognitionException);                   	
+            assertTrue(e instanceof CmisInvalidArgumentException);
+            assertTrue(e.getMessage().contains("<EOF>")
+                    || e.getMessage().contains("no viable alternative")
+                    || e.getMessage().contains("mismatched input"));
+            assertTrue(e.getCause() instanceof RuntimeException);
         }
         log.debug("...Stop testContainsSyntaxError.");
     }

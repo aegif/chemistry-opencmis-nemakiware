@@ -104,7 +104,8 @@ Compared with phase 5 (`1.1.4-nemakiware`):
  - Toolchain: Mockito Java agent for Surefire/Failsafe, build-helper
    3.6.0, checkstyle 3.6.0, rat 0.16.1, javadoc 3.11.2;
    supplemental-models updated for Jakarta artifacts
- - server-support ANTLR3 runtime/plugin aligned to 3.5.3
+ - server-support CMIS query grammars migrated from ANTLR3 to ANTLR4
+   4.13.2 (compatibility AST + hand-written CmisQueryWalker)
  - OSGi Core / Felix bundle plugin left at current versions (raise
    only after a dedicated compatibility pass)
 
@@ -120,9 +121,6 @@ HTTP invokers:
 Explicitly deferred (follow-up phases):
 
  - NemakiWare Packages / `lib/built-jars` intake
- - Full ANTLR3 → ANTLR4 rewrite for server-support CMIS query grammars
-   (AST / tree-grammar / rewrite; `Tree` API across QueryObject /
-   walkers / inmemory). Runtime/plugin are aligned on 3.5.3 until then.
 
 Android client (done in this phase beyond the earlier deferral note):
 

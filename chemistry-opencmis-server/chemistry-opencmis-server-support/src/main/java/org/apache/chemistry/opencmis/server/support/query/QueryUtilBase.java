@@ -18,49 +18,41 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import org.antlr.runtime.BaseRecognizer;
-import org.antlr.runtime.RecognitionException;
-import org.antlr.runtime.TokenStream;
-import org.antlr.runtime.tree.CommonTree;
-import org.antlr.runtime.tree.TreeParser;
+import org.antlr.v4.runtime.RecognitionException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.server.support.TypeManager;
 
 /**
  * Utility class to help parsing and processing a query statement using the
- * AntLR parser Subclasses have to implement methods that setup parser and query
+ * AntLR parser. Subclasses have to implement methods that setup parser and query
  * walker and parse and process a query. This class provides common methods for
- * error handling and for storing the necessary opencmis objects for query
- * support
- * 
+ * error handling and for storing the necessary OpenCMIS objects for query
+ * support.
+ *
  * @param <T>
- *            AntLR tree grammar, will usually be a CmisQueryWalker but can be
- *            custom class for customized (extended) parsers
+ *            walker type, usually {@link CmisQueryWalker}
  */
-public abstract class QueryUtilBase<T extends TreeParser> {
+public abstract class QueryUtilBase<T> {
 
     protected T walker;
     protected QueryObject queryObj;
     protected PredicateWalkerBase predicateWalker;
     protected String statement;
 
-    protected CommonTree parserTree; // the ANTLR tree after parsing phase
-    protected TokenStream tokens; // the ANTLR token stream
+    protected CmisTree parserTree; // the AST after parsing phase
 
     /**
      * Perform the first phase of query processing. Setup lexer and parser,
      * parse the statement, check for syntax errors and create an AST
-     * 
+     *
      * @return the abstract syntax tree of the parsed statement
      */
-    public abstract CommonTree parseStatement() throws RecognitionException;
+    public abstract CmisTree parseStatement() throws RecognitionException;
 
     /**
      * Perform the second phase of query processing, analyzes the select part,
-     * check for semantic errors, fill the query object. Usually a walker will
-     * be CmisQueryWalker (or subclass) if the supporting OpenCMIS query classes
-     * are used.
+     * check for semantic errors, fill the query object.
      */
     public abstract void walkStatement() throws RecognitionException;
 
@@ -77,7 +69,7 @@ public abstract class QueryUtilBase<T extends TreeParser> {
         walker = null;
         queryObj = new QueryObject(tm);
         if (mode != null) {
-        	queryObj.setSelectMode(mode);
+            queryObj.setSelectMode(mode);
         }
         predicateWalker = pw;
         this.statement = statement;
@@ -118,18 +110,16 @@ public abstract class QueryUtilBase<T extends TreeParser> {
     }
 
     public String getErrorMessage(RecognitionException e) {
-        if (null == walker) {
-            return e.toString();
-        } else {
-            return getErrorMessage(walker, e);
+        if (e instanceof FailedPredicateException) {
+            String text = ((FailedPredicateException) e).predicateText;
+            if (text != null) {
+                return text;
+            }
         }
-    }
-
-    private static String getErrorMessage(BaseRecognizer recognizer, RecognitionException e) {
-        String[] tokenNames = recognizer.getTokenNames();
-        String hdr = "Line " + e.line + ":" + e.charPositionInLine;
-        String msg = recognizer.getErrorMessage(e, tokenNames);
-        return hdr + " " + msg;
+        if (e.getMessage() != null) {
+            return e.getMessage();
+        }
+        return e.toString();
     }
 
 }

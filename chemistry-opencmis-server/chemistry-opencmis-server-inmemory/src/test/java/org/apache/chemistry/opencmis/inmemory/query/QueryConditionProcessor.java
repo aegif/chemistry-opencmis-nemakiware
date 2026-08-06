@@ -20,7 +20,7 @@ package org.apache.chemistry.opencmis.inmemory.query;
 
 import java.util.List;
 
-import org.antlr.runtime.tree.Tree;
+import org.apache.chemistry.opencmis.server.support.query.CmisTree;
 import org.apache.chemistry.opencmis.server.support.query.PredicateWalkerBase;
 
 /**
@@ -30,78 +30,78 @@ import org.apache.chemistry.opencmis.server.support.query.PredicateWalkerBase;
  */
 public interface QueryConditionProcessor extends PredicateWalkerBase {
 
-    void onStartProcessing(Tree whereNode);
+    void onStartProcessing(CmisTree whereNode);
 
     void onStopProcessing();
 
     // Compare operators
-    void onEquals(Tree eqNode, Tree leftNode, Tree rightNode);
+    void onEquals(CmisTree eqNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onNotEquals(Tree neNode, Tree leftNode, Tree rightNode);
+    void onNotEquals(CmisTree neNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onGreaterThan(Tree gtNode, Tree leftNode, Tree rightNode);
+    void onGreaterThan(CmisTree gtNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onGreaterOrEquals(Tree geNode, Tree leftNode, Tree rightNode);
+    void onGreaterOrEquals(CmisTree geNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onLessThan(Tree ltNode, Tree leftNode, Tree rightNode);
+    void onLessThan(CmisTree ltNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onLessOrEquals(Tree leqNode, Tree leftNode, Tree rightNode);
+    void onLessOrEquals(CmisTree leqNode, CmisTree leftNode, CmisTree rightNode);
 
     // Boolean operators
-    void onPreNot(Tree opNode, Tree leftNode);
+    void onPreNot(CmisTree opNode, CmisTree leftNode);
 
-    void onNot(Tree opNode, Tree leftNode);
+    void onNot(CmisTree opNode, CmisTree leftNode);
 
-    void onPostNot(Tree opNode, Tree leftNode);
+    void onPostNot(CmisTree opNode, CmisTree leftNode);
 
-    void onPreAnd(Tree opNode, Tree leftNode, Tree rightNode);
+    void onPreAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onAnd(Tree opNode, Tree leftNode, Tree rightNode);
+    void onAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onPostAnd(Tree opNode, Tree leftNode, Tree rightNode);
+    void onPostAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onPreOr(Tree opNode, Tree leftNode, Tree rightNode);
+    void onPreOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onOr(Tree opNode, Tree leftNode, Tree rightNode);
+    void onOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    void onPostOr(Tree opNode, Tree leftNode, Tree rightNode);
+    void onPostOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
     // Multi-value:
-    void onIn(Tree node, Tree colNode, Tree listNode);
+    void onIn(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    void onNotIn(Tree node, Tree colNode, Tree listNode);
+    void onNotIn(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    void onInAny(Tree node, Tree colNode, Tree listNode);
+    void onInAny(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    void onNotInAny(Tree node, Tree colNode, Tree listNode);
+    void onNotInAny(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    void onEqAny(Tree node, Tree literalNode, Tree colNode);
+    void onEqAny(CmisTree node, CmisTree literalNode, CmisTree colNode);
 
     // Null comparisons:
-    void onIsNull(Tree nullNode, Tree colNode);
+    void onIsNull(CmisTree nullNode, CmisTree colNode);
 
-    void onIsNotNull(Tree notNullNode, Tree colNode);
+    void onIsNotNull(CmisTree notNullNode, CmisTree colNode);
 
     // String matching:
-    void onIsLike(Tree node, Tree colNode, Tree stringNode);
+    void onIsLike(CmisTree node, CmisTree colNode, CmisTree stringNode);
 
-    void onIsNotLike(Tree node, Tree colNode, Tree stringNode);
+    void onIsNotLike(CmisTree node, CmisTree colNode, CmisTree stringNode);
 
     // Functions:
-    void onContains(Tree node, Tree typeNode, Tree searchExprNode);
+    void onContains(CmisTree node, CmisTree typeNode, CmisTree searchExprNode);
 
-    void onInFolder(Tree node, Tree colNode, Tree paramNode);
+    void onInFolder(CmisTree node, CmisTree colNode, CmisTree paramNode);
 
-    void onInTree(Tree node, Tree colNode, Tree paramNode);
+    void onInTree(CmisTree node, CmisTree colNode, CmisTree paramNode);
 
-    void onScore(Tree node);
+    void onScore(CmisTree node);
 
     // full text search
-    void onTextAnd(Tree node, List<Tree> conjunctionNodes);
+    void onTextAnd(CmisTree node, List<CmisTree> conjunctionNodes);
 
-    void onTextOr(Tree node, List<Tree> termNodes);
+    void onTextOr(CmisTree node, List<CmisTree> termNodes);
 
-    void onTextMinus(Tree node, Tree notNode);
+    void onTextMinus(CmisTree node, CmisTree notNode);
 
     void onTextWord(String word);
 

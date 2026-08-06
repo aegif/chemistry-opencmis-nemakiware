@@ -168,7 +168,7 @@
         <okhttp.artifactId>okhttp-jvm</okhttp.artifactId>
         <!-- Overwritten by Jacoco prepare-agent when the coverage profile is active. -->
         <argLine></argLine>
-        <antlr3.version>3.5.3</antlr3.version>
+        <antlr4.version>4.13.2</antlr4.version>
         
         <!-- Jakarta EE 11 aligned API versions -->
         <jakarta.xml.ws.version>4.0.1</jakarta.xml.ws.version>
@@ -230,8 +230,8 @@
             <plugins>
                 <plugin>
                     <groupId>org.antlr</groupId>
-                    <artifactId>maven-gunit-plugin</artifactId>
-                    <version>${antlr3.version}</version>
+                    <artifactId>antlr4-maven-plugin</artifactId>
+                    <version>${antlr4.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

@@ -18,17 +18,35 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-
 /**
- * Base interface for a tree walker of a WHERE clause.
- * <p>
- * COntains only a single method used by the ANTLR query walker to initiate a
- * tree walk for evaluating the query. You can inherit from this interface if
- * you want to have your own walking mechanism
- * </p>
+ * Minimal ANTLR3-compatible AST node API used by CMIS query walkers and
+ * evaluators.
  */
-public interface PredicateWalkerBase {
+public interface CmisTree {
 
-    Boolean walkPredicate(CmisTree whereNode);
+    int getType();
 
+    String getText();
+
+    int getChildCount();
+
+    CmisTree getChild(int i);
+
+    int getTokenStartIndex();
+
+    void setTokenStartIndex(int index);
+
+    CmisTree getParent();
+
+    void setParent(CmisTree parent);
+
+    void addChild(CmisTree child);
+
+    void setChild(int i, CmisTree child);
+
+    /**
+     * ANTLR3 {@code CommonTree.toStringTree()} compatible formatting:
+     * leaves return text; non-leaves return {@code (text child1 child2 ...)}.
+     */
+    String toStringTree();
 }

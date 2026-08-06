@@ -43,7 +43,7 @@ public class TestParserExt extends AbstractParserTest {
     @Test
     public void test_query1() {
         testParser("query", "SELECT DISTINCT a, b, c FROM Document",
-                "(SELECT DISTINCT (LIST (COL a) (COL b) (COL c)) (FROM (TABLE Document)))");
+                "(SELECT DISTINCT (SEL_LIST (COL a) (COL b) (COL c)) (FROM (TABLE Document)))");
     }
 
     @Test

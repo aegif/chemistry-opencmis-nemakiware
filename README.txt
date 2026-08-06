@@ -87,17 +87,48 @@ Compared with phase 4 (`1.1.3-nemakiware`):
 
 NemakiWare consumption remains out of scope for phase 5.
 
-Phase 6 modernization notes (1.1.6-nemakiware)
+Phase 6 modernization notes (1.1.7-nemakiware)
 ==============================================
 
 Compared with phase 5 (`1.1.4-nemakiware`):
 
- - Artifact version: `1.1.6-nemakiware` (6a was `1.1.5-nemakiware`)
+ - Artifact version: `1.1.7-nemakiware`
+   (6a=`1.1.5`, 6b=`1.1.6`, 6c–6f=`1.1.7`)
  - TCK main (`AbstractCmisTest`, `AbstractCmisTestGroup`,
    `JUnitHelper`) switched from JUnit 4 to JUnit Jupiter API
  - Parent test-scoped `junit:junit` removed; TCK depends on
    `junit-jupiter-api` instead
  - FIT embedded Tomcat upgraded from 7.0.75 to 10.1.39 (Jakarta)
+ - CI (`verify-java21-25.yml`): inmemory unit tests, Workbench and
+   Android `package` steps; on-demand FIT via `fit-tck.yml`
+ - Toolchain: Mockito Java agent for Surefire/Failsafe, build-helper
+   3.6.0, checkstyle 3.6.0, rat 0.16.1, javadoc 3.11.2;
+   supplemental-models updated for Jakarta artifacts
+ - OSGi Core / Felix bundle plugin left at current versions (raise
+   only after a dedicated compatibility pass)
+
+HTTP invokers:
+
+ - Default remains JDK `DefaultHttpInvoker`
+   (`org.apache.chemistry.opencmis.client.bindings.spi.http.DefaultHttpInvoker`)
+ - Recommended alternatives (session parameter
+   `org.apache.chemistry.opencmis.binding.httpinvoker.class`):
+   - `...spi.http.ApacheClientHttpInvoker` (HttpClient 5)
+   - `...spi.http.OkHttpHttpInvoker` (OkHttp 5 / okhttp-jvm)
+
+Explicitly deferred (follow-up phases):
+
+ - NemakiWare Packages / `lib/built-jars` intake
+ - ANTLR3 → ANTLR4 rewrite for server-support CMIS query grammars
+   (`src/main/antlr3/.../query/*.g`, `antlr-runtime:3.5`,
+   AST/tree-grammar/rewrite features; generated sources under
+   `target/generated-sources/antlr3/`; tightly coupled to
+   `QueryObject`, `QueryUtil*`, walkers, and inmemory query tests)
+ - Android client API refresh beyond provided
+   `com.google.android:android:2.3.3` (antrun source copy from
+   commons/client, XmlPull/`android.util.Xml` fork of XMLUtils,
+   custom HandlerResolver / MimetypesFileTypeMap shims). CI now
+   packages the module; raising min SDK needs a dedicated plan.
 
 NemakiWare consumption remains out of scope for phase 6.
 

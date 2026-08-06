@@ -1,259 +1,144 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <supplementalDataModels>
+    <!-- Jakarta EE API metadata (replaces legacy javax.* entries for dependency reports). -->
     <supplement>
         <project>
-            <groupId>javax.xml.ws</groupId>
-            <artifactId>jaxws-api</artifactId>
-            <version>2.1</version>
-            <name>JAX-WS (JSR-224) API</name>
-            <url>https://jax-ws.dev.java.net/</url>
+            <groupId>jakarta.xml.ws</groupId>
+            <artifactId>jakarta.xml.ws-api</artifactId>
+            <version>4.0.1</version>
+            <name>Jakarta XML Web Services API</name>
+            <url>https://github.com/jakartaee/jax-ws-api</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+                    <name>Eclipse Public License 2.0</name>
+                    <url>https://www.eclipse.org/legal/epl-2.0/</url>
                 </license>
             </licenses>
         </project>
     </supplement>
     <supplement>
         <project>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
-            <version>2.1.11</version>
-            <name>Sun JAXB Reference Implementation Runtime</name>
-            <url>https://jaxb.dev.java.net/</url>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>4.0.0</version>
+            <name>Jakarta XML Binding API</name>
+            <url>https://github.com/jakartaee/jaxb-api</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+                    <name>Eclipse Distribution License 1.0</name>
+                    <url>https://www.eclipse.org/org/documents/edl-v10.php</url>
                 </license>
             </licenses>
         </project>
     </supplement>
     <supplement>
         <project>
-            <groupId>com.sun.xml.messaging.saaj</groupId>
-            <artifactId>saaj-impl</artifactId>
-            <version>1.3.3</version>
-            <name>Sun SAAJ Standard Implementation</name>
-            <url>https://saaj.dev.java.net/</url>
+            <groupId>jakarta.activation</groupId>
+            <artifactId>jakarta.activation-api</artifactId>
+            <version>2.1.0</version>
+            <name>Jakarta Activation API</name>
+            <url>https://github.com/jakartaee/jaf-api</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+                    <name>Eclipse Distribution License 1.0</name>
+                    <url>https://www.eclipse.org/org/documents/edl-v10.php</url>
                 </license>
             </licenses>
         </project>
     </supplement>
     <supplement>
         <project>
-            <groupId>javax.xml.soap</groupId>
-            <artifactId>saaj-api</artifactId>
-            <version>1.3</version>
-            <name>SAAJ API</name>
-            <url>https://saaj.dev.java.net/</url>
+            <groupId>jakarta.jws</groupId>
+            <artifactId>jakarta.jws-api</artifactId>
+            <version>3.0.0</version>
+            <name>Jakarta Web Services Metadata API</name>
+            <url>https://github.com/jakartaee/jws-api</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+                    <name>Eclipse Public License 2.0</name>
+                    <url>https://www.eclipse.org/legal/epl-2.0/</url>
                 </license>
             </licenses>
         </project>
     </supplement>
     <supplement>
         <project>
-            <groupId>com.sun.xml.stream.buffer</groupId>
-            <artifactId>streambuffer</artifactId>
-            <version>0.9</version>
-            <name>XML Stream Buffer Project</name>
-            <url>https://xmlstreambuffer.dev.java.net/</url>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.1.0</version>
+            <name>Jakarta Servlet API</name>
+            <url>https://github.com/jakartaee/servlet</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+                    <name>Eclipse Public License 2.0</name>
+                    <url>https://www.eclipse.org/legal/epl-2.0/</url>
                 </license>
             </licenses>
         </project>
     </supplement>
     <supplement>
         <project>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.1</version>
-            <name>Java Architecture for XML Binding</name>
-            <url>https://jaxb.dev.java.net/</url>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>4.0.5</version>
+            <name>Eclipse Implementation of JAXB</name>
+            <url>https://eclipse-ee4j.github.io/jaxb-ri/</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Common Development And Distribution License (CDDL) Version 1.0</name>
-                    <url>http://www.sun.com/cddl/cddl.html</url>
+                    <name>Eclipse Distribution License 1.0</name>
+                    <url>https://www.eclipse.org/org/documents/edl-v10.php</url>
                 </license>
             </licenses>
         </project>
     </supplement>
     <supplement>
         <project>
-            <groupId>javax.activation</groupId>
-            <artifactId>activation</artifactId>
-            <version>1.1</version>
-            <name>JavaBeans(TM) Activation Framework Specification</name>
-            <url>http://www.oracle.com/technetwork/java/jaf11-139815.html</url>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-activation</artifactId>
+            <version>2.0.2</version>
+            <name>Angus Activation</name>
+            <url>https://eclipse-ee4j.github.io/angus-activation/</url>
             <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
+                <name>Eclipse Foundation</name>
+                <url>https://www.eclipse.org/</url>
             </organization>
             <licenses>
                 <license>
-                    <name>Common Development And Distribution License (CDDL) Version 1.0</name>
-                    <url>http://www.sun.com/cddl/cddl.html</url>
+                    <name>Eclipse Public License 2.0</name>
+                    <url>https://www.eclipse.org/legal/epl-2.0/</url>
                 </license>
             </licenses>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>javax.annotation</groupId>
-            <artifactId>jsr250-api</artifactId>
-            <version>1.1</version>
-            <name>JSR-250 Common Annotations for the Java(TM) Platform</name>
-            <url>http://jcp.org/aboutJava/communityprocess/final/jsr250/index.html</url>
-            <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
-            </organization>
-            <licenses>
-                <license>
-                    <name>Common Development And Distribution License (CDDL) Version 1.0</name>
-                    <url>http://www.sun.com/cddl/cddl.html</url>
-                </license>
-            </licenses>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>javax.jws</groupId>
-            <artifactId>jsr181-api</artifactId>
-            <version>1.0-MR1</version>
-            <name>Web Services Metadata for Java</name>
-            <url>http://jcp.org/en/jsr/summary?id=181</url>
-            <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
-            </organization>
-            <licenses>
-                <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
-                </license>
-            </licenses>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>com.sun.org.apache.xml.internal</groupId>
-            <artifactId>resolver</artifactId>
-            <version>20050927</version>
-            <name>XML Resolver library</name>
-            <organization>
-                <name>Sun Microsystems, Inc</name>
-                <url>http://www.sun.com/</url>
-            </organization>
-            <licenses>
-                <license>
-                    <name>Apache 2</name>
-                    <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-                </license>
-            </licenses>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>javax.xml.stream</groupId>
-            <artifactId>stax-api</artifactId>
-            <version>1.0</version>
-            <name>Streaming API for XML</name>
-            <url>http://stax.codehaus.org</url>
-            <organization>
-                <name>BEA Systems</name>
-            </organization>
-            <licenses>
-                <license>
-                    <name>Dual license consisting of the CDDL v1.0 and GPL v2</name>
-                    <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
-                </license>
-            </licenses>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>org.jvnet.staxex</groupId>
-            <artifactId>stax-ex</artifactId>
-            <version>1.2</version>
-            <name>StAX-Ex Project</name>
-            <organization>
-                <name>Java.net</name>
-                <url>http://dev.java.net</url>
-            </organization>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>org.jvnet</groupId>
-            <artifactId>mimepull</artifactId>
-            <version>1.3</version>
-            <url>https://mimepull.dev.java.net</url>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>stax</groupId>
-            <artifactId>stax-api</artifactId>
-            <version>1.0.1</version>
-            <organization>
-                <name>Codehaus</name>
-                <url>http://codehaus.org</url>
-            </organization>
-        </project>
-    </supplement>
-    <supplement>
-        <project>
-            <groupId>antlr</groupId>
-            <artifactId>antlr</artifactId>
-            <version>2.7.7</version>
-            <organization>
-                <name>ANTLR</name>
-                <url>http://www.antlr.org/</url>
-            </organization>
         </project>
     </supplement>
     <supplement>
         <project>
             <groupId>org.antlr</groupId>
             <artifactId>antlr-runtime</artifactId>
-            <version>3.2</version>
+            <version>3.5</version>
             <organization>
                 <name>ANTLR</name>
                 <url>http://www.antlr.org/</url>
@@ -270,14 +155,14 @@
         <project>
             <groupId>org.antlr</groupId>
             <artifactId>stringtemplate</artifactId>
-            <version>3.2</version>
+            <version>3.2.1</version>
             <organization>
                 <name>ANTLR</name>
                 <url>http://www.antlr.org/</url>
             </organization>
         </project>
     </supplement>
-     <supplement>
+    <supplement>
         <project>
             <groupId>net.sf.jopt-simple</groupId>
             <artifactId>jopt-simple</artifactId>

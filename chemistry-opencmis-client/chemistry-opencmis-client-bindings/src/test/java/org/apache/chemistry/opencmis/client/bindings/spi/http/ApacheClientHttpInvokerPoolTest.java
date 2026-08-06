@@ -19,6 +19,7 @@
 package org.apache.chemistry.opencmis.client.bindings.spi.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -641,17 +642,78 @@ public class ApacheClientHttpInvokerPoolTest {
     @Test
     public void failedTempDeleteKeepsBytesInBudget() {
         RequestSpoolLimiter limiter = RequestSpoolLimiter.getInstance();
-        RequestSpoolLimiter.SpoolLease lease = limiter.acquire(2, 10_000, 1000);
-        lease.addBytes(2500);
-        lease.releasePermitKeepBytes();
-        assertEquals(0, limiter.getActiveSpools());
-        assertEquals(2500, limiter.getActiveBytes());
-        assertEquals(2500, limiter.getOrphanedBytesForTests());
+        RequestSpoolLimiter.SpoolLease lease = limiter.acquire(2, 10_000, 200);
+        RequestSpoolLimiter.SpoolLease other = null;
+        try {
+            lease.addBytes(2500);
+            lease.releasePermitKeepBytes();
+            assertEquals(0, limiter.getActiveSpools());
+            assertEquals(2500, limiter.getActiveBytes());
+            assertEquals(2500, limiter.getOrphanedBytesForTests());
 
-        RequestSpoolLimiter.SpoolLease other = limiter.acquire(2, 10_000, 1000);
-        assertThrows(CmisConnectionException.class, () -> other.addBytes(8000));
-        other.release();
-        assertEquals(2500, limiter.getActiveBytes());
+            // Orphaned bytes never come back, so this waits out the timeout and fails.
+            RequestSpoolLimiter.SpoolLease acquired = limiter.acquire(2, 10_000, 200);
+            other = acquired;
+            assertThrows(CmisConnectionException.class, () -> acquired.addBytes(8000));
+            assertEquals(2500, limiter.getActiveBytes());
+        } finally {
+            lease.releasePermitOnly();
+            if (other != null) {
+                other.release();
+            }
+        }
+    }
+
+    @Test
+    public void byteBudgetWaitsForActiveBodiesToRelease() throws Exception {
+        RequestSpoolLimiter limiter = RequestSpoolLimiter.getInstance();
+        RequestSpoolLimiter.SpoolLease first = limiter.acquire(2, 10_000, 5000);
+        RequestSpoolLimiter.SpoolLease second = null;
+        try {
+            first.addBytes(9000);
+
+            final RequestSpoolLimiter.SpoolLease waiting = limiter.acquire(2, 10_000, 5000);
+            second = waiting;
+            ExecutorService pool = Executors.newSingleThreadExecutor();
+            executors.add(pool);
+            final CountDownLatch charging = new CountDownLatch(1);
+            Future<?> waiter = pool.submit(() -> {
+                charging.countDown();
+                waiting.addBytes(5000);
+                return null;
+            });
+
+            assertTrue(charging.await(5, TimeUnit.SECONDS));
+            Thread.sleep(200);
+            assertFalse(waiter.isDone(), "charging must wait while the budget is exhausted");
+
+            first.release();
+            waiter.get(5, TimeUnit.SECONDS);
+            assertEquals(5000, limiter.getActiveBytes());
+        } finally {
+            first.release();
+            if (second != null) {
+                second.release();
+            }
+        }
+        assertEquals(0, limiter.getActiveBytes());
+    }
+
+    @Test
+    public void bodyLargerThanTotalBudgetFailsFast() {
+        RequestSpoolLimiter limiter = RequestSpoolLimiter.getInstance();
+        RequestSpoolLimiter.SpoolLease lease = limiter.acquire(1, 4096, 10_000);
+        try {
+            lease.addBytes(3000);
+            long started = System.nanoTime();
+            assertThrows(CmisConnectionException.class, () -> lease.addBytes(3000));
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+            assertTrue(elapsedMs < 5000,
+                    "a body that can never fit must not wait out the timeout, waited " + elapsedMs);
+        } finally {
+            lease.release();
+        }
+        assertEquals(0, limiter.getActiveBytes());
     }
 
     @Test
@@ -700,6 +762,94 @@ public class ApacheClientHttpInvokerPoolTest {
                     file.delete();
                 }
             }
+            deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void uploadWaitsForByteBudgetAndSucceeds() throws Exception {
+        final CountDownLatch firstOnWire = new CountDownLatch(1);
+        final CountDownLatch releaseFirst = new CountDownLatch(1);
+        final AtomicLong requestCount = new AtomicLong();
+        ServerHandle server = startServer("/upload", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                if (requestCount.getAndIncrement() == 0) {
+                    firstOnWire.countDown();
+                    try {
+                        releaseFirst.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                drain(exchange.getRequestBody());
+                exchange.sendResponseHeaders(201, -1);
+                exchange.close();
+            }
+        });
+
+        BindingSession session = new SessionImpl();
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        executors.add(pool);
+        try {
+            session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(64 * 1024), true);
+            session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(4), true);
+            // Budget fits exactly one 8 KiB body at a time.
+            session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES, Integer.valueOf(8192), true);
+            session.put(SessionParameter.HTTP_CONNECTION_REQUEST_TIMEOUT, Integer.valueOf(10_000), true);
+
+            final ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            final UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
+            final Output body = fillingOutput(4, 2048, (byte) 'w');
+
+            Future<Response> first = pool
+                    .submit(() -> invoker.invokePOST(url, "application/octet-stream", body, session));
+            assertTrue(firstOnWire.await(5, TimeUnit.SECONDS));
+
+            Future<Response> second = pool
+                    .submit(() -> invoker.invokePOST(url, "application/octet-stream", body, session));
+            Thread.sleep(300);
+            assertFalse(second.isDone(), "second upload must wait for byte budget, not fail");
+
+            releaseFirst.countDown();
+            assertEquals(201, first.get(10, TimeUnit.SECONDS).getResponseCode());
+            assertEquals(201, second.get(15, TimeUnit.SECONDS).getResponseCode());
+            assertEquals(0, RequestSpoolLimiter.getInstance().getActiveBytes());
+        } finally {
+            releaseFirst.countDown();
+            HttpInvokerSessionResources.close(session);
+            server.stop();
+        }
+    }
+
+    @Test
+    public void successfulUploadWithFailedTempDeleteKeepsBytesCharged() throws Exception {
+        File tempDir = Files.createTempDirectory("opencmis-success-orphan-").toFile();
+        BindingSession session = new SessionImpl();
+        ServerHandle server = startDrainUploadServer();
+        try {
+            session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
+            session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
+            session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES, Long.valueOf(64 * 1024), true);
+
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(true);
+
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokePOST(new UrlBuilder("http://127.0.0.1:" + server.port + "/upload"),
+                    "application/octet-stream", fillingOutput(2, 4096, (byte) 'Z'), session);
+            assertEquals(201, response.getResponseCode());
+
+            assertEquals(0, RequestSpoolLimiter.getInstance().getActiveSpools());
+            assertEquals(8192, RequestSpoolLimiter.getInstance().getActiveBytes(),
+                    "undeletable temp file must keep its bytes charged");
+            assertEquals(8192, RequestSpoolLimiter.getInstance().getOrphanedBytesForTests());
+            File[] leftover = tempDir.listFiles();
+            assertNotNull(leftover);
+            assertEquals(1, leftover.length, "undeleted temp file should remain");
+        } finally {
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
+            HttpInvokerSessionResources.close(session);
+            server.stop();
             deleteRecursively(tempDir);
         }
     }

@@ -312,7 +312,10 @@ package org.apache.chemistry.opencmis.commons;
  * <tr>
  * <td>{@link #HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES}</td>
  * <td>Max total bytes across all active materialized request bodies (heap
- * and/or disk) classloader-wide (Apache HttpClient 5). Locked together with
+ * and/or disk) classloader-wide (Apache HttpClient 5). When the budget is
+ * exhausted, new bodies wait up to {@link #HTTP_CONNECTION_REQUEST_TIMEOUT}
+ * for active bodies to release bytes before failing; a body that alone
+ * exceeds the budget fails immediately. Locked together with
  * {@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT} on first materialization; later
  * sessions with a different value are rejected.</td>
  * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
@@ -864,6 +867,9 @@ public final class SessionParameter {
      * Apache HttpClient 5: max total bytes across all active materialized
      * request bodies (heap and/or disk; classloader-wide; locked with
      * {@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT} on first materialization).
+     * When exhausted, new bodies wait up to
+     * {@link #HTTP_CONNECTION_REQUEST_TIMEOUT} for budget instead of failing
+     * immediately.
      */
     public static final String HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxtotalbytes";
 

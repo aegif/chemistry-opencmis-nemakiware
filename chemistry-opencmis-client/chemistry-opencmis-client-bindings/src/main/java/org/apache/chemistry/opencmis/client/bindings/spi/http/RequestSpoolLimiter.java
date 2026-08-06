@@ -32,7 +32,10 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
  * <p>
  * A concurrency permit is required while body bytes are being buffered. After
  * materialization finishes, the permit can be released while the byte budget
- * remains charged until the temp file / heap buffer is discarded. The first
+ * remains charged until the temp file / heap buffer is discarded. When the
+ * byte budget is exhausted, charging waits (bounded by the acquire timeout)
+ * for active bodies to release their bytes instead of failing immediately;
+ * only a body that alone can never fit into the budget fails fast. The first
  * successful acquire locks {@code maxConcurrent} and {@code maxTotalBytes} for
  * this classloader. Later acquires that request different values are rejected.
  * <p>
@@ -43,10 +46,15 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
  */
 final class RequestSpoolLimiter {
 
+    /** Upper bound for a single byte-budget wait (1 day). */
+    private static final long MAX_BYTE_WAIT_MS = TimeUnit.DAYS.toMillis(1);
+
     private static final RequestSpoolLimiter INSTANCE = new RequestSpoolLimiter();
 
     private final AtomicInteger activeMaterializations = new AtomicInteger();
-    private final AtomicLong activeBytes = new AtomicLong();
+    private final Object bytesLock = new Object();
+    /** Guarded by {@link #bytesLock}. */
+    private long activeBytes;
     private final AtomicLong orphanedBytes = new AtomicLong();
     private final Object configLock = new Object();
     private volatile Integer lockedMaxConcurrent;
@@ -68,7 +76,10 @@ final class RequestSpoolLimiter {
                         "Cannot reset RequestSpoolLimiter while materializations are active");
             }
             activeMaterializations.set(0);
-            activeBytes.set(0);
+            synchronized (bytesLock) {
+                activeBytes = 0;
+                bytesLock.notifyAll();
+            }
             orphanedBytes.set(0);
             lockedMaxConcurrent = null;
             lockedMaxTotalBytes = null;
@@ -81,7 +92,9 @@ final class RequestSpoolLimiter {
     }
 
     long getActiveBytes() {
-        return activeBytes.get();
+        synchronized (bytesLock) {
+            return activeBytes;
+        }
     }
 
     long getOrphanedBytesForTests() {
@@ -118,7 +131,7 @@ final class RequestSpoolLimiter {
             throw new CmisConnectionException("Interrupted while waiting for request body materialization permit", e);
         }
         activeMaterializations.incrementAndGet();
-        return new SpoolLease(this, sem);
+        return new SpoolLease(this, sem, Math.max(1L, acquireTimeoutMs));
     }
 
     private Semaphore configureAndGetSemaphore(int maxConcurrent, long maxTotalBytes) {
@@ -152,17 +165,50 @@ final class RequestSpoolLimiter {
         }
     }
 
-    void addBytes(long delta) {
+    /**
+     * Charges {@code delta} bytes against the classloader-wide budget. If the
+     * budget is currently exhausted, waits up to {@code waitTimeoutMs} for
+     * active bodies to release bytes. Fails immediately only when this body
+     * alone ({@code alreadyAccounted + delta}) can never fit into the budget.
+     */
+    void addBytes(long delta, long alreadyAccounted, long waitTimeoutMs) {
         if (delta <= 0) {
             return;
         }
         Long maxTotalBytes = lockedMaxTotalBytes;
-        long next = activeBytes.addAndGet(delta);
-        if (maxTotalBytes != null && maxTotalBytes.longValue() != Long.MAX_VALUE && next > maxTotalBytes.longValue()) {
-            activeBytes.addAndGet(-delta);
-            throw new CmisConnectionException(
-                    "HTTP request body materialization total byte limit exceeded (classloader-wide max "
-                            + maxTotalBytes + " bytes)");
+        long limit = maxTotalBytes == null ? Long.MAX_VALUE : maxTotalBytes.longValue();
+        if (limit == Long.MAX_VALUE) {
+            synchronized (bytesLock) {
+                activeBytes += delta;
+            }
+            return;
+        }
+        if (alreadyAccounted + delta > limit) {
+            throw new CmisConnectionException("HTTP request body materialization total byte limit exceeded: "
+                    + "this request body alone needs " + (alreadyAccounted + delta)
+                    + " bytes but the classloader-wide budget is " + limit + " bytes");
+        }
+        // Clamp so deadline arithmetic cannot overflow when callers configure
+        // an effectively infinite timeout (toNanos saturates at Long.MAX_VALUE).
+        long clampedWaitMs = Math.min(Math.max(1L, waitTimeoutMs), MAX_BYTE_WAIT_MS);
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(clampedWaitMs);
+        synchronized (bytesLock) {
+            while (activeBytes + delta > limit) {
+                long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
+                if (remainingMs <= 0) {
+                    throw new CmisConnectionException(
+                            "HTTP request body materialization total byte limit exceeded (classloader-wide max "
+                                    + limit + " bytes); timed out waiting for active bodies to release budget");
+                }
+                try {
+                    bytesLock.wait(remainingMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new CmisConnectionException(
+                            "Interrupted while waiting for request body materialization byte budget", e);
+                }
+            }
+            activeBytes += delta;
         }
     }
 
@@ -173,7 +219,10 @@ final class RequestSpoolLimiter {
 
     private void subtractBytes(long bytesAccounted) {
         if (bytesAccounted > 0) {
-            activeBytes.addAndGet(-bytesAccounted);
+            synchronized (bytesLock) {
+                activeBytes -= bytesAccounted;
+                bytesLock.notifyAll();
+            }
         }
     }
 
@@ -192,17 +241,19 @@ final class RequestSpoolLimiter {
     static final class SpoolLease {
         private final RequestSpoolLimiter limiter;
         private final Semaphore semaphore;
+        private final long byteWaitTimeoutMs;
         private final AtomicLong accountedBytes = new AtomicLong();
         private final AtomicBoolean permitReleased = new AtomicBoolean();
         private final AtomicBoolean bytesReleased = new AtomicBoolean();
 
-        SpoolLease(RequestSpoolLimiter limiter, Semaphore semaphore) {
+        SpoolLease(RequestSpoolLimiter limiter, Semaphore semaphore, long byteWaitTimeoutMs) {
             this.limiter = limiter;
             this.semaphore = semaphore;
+            this.byteWaitTimeoutMs = byteWaitTimeoutMs;
         }
 
         void addBytes(long delta) {
-            limiter.addBytes(delta);
+            limiter.addBytes(delta, accountedBytes.get(), byteWaitTimeoutMs);
             accountedBytes.addAndGet(delta);
         }
 

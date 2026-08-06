@@ -328,15 +328,13 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             IOUtils.closeQuietly(inputStream);
             IOUtils.closeQuietly(errorStream);
             boolean tempDeleted = true;
-            if (requestTempFile != null) {
-                if (requestTempFile.exists()) {
-                    tempDeleted = requestTempFile.delete();
-                    if (!tempDeleted) {
-                        requestTempFile.deleteOnExit();
-                        LOG.warn(
-                                "Failed to delete HTTP request temp file {}; keeping its size in the materialization byte budget",
-                                requestTempFile.getAbsolutePath());
-                    }
+            if (requestTempFile != null && requestTempFile.exists()) {
+                tempDeleted = !FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get() && requestTempFile.delete();
+                if (!tempDeleted) {
+                    requestTempFile.deleteOnExit();
+                    LOG.warn(
+                            "Failed to delete HTTP request temp file {}; keeping its size in the materialization byte budget",
+                            requestTempFile.getAbsolutePath());
                 }
             }
             if (requestSpoolLease != null) {
@@ -433,6 +431,11 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         } catch (RuntimeException re) {
             spool.discard();
             throw re;
+        } catch (Error err) {
+            // e.g. OutOfMemoryError while buffering: the lease must not leak
+            // because limits are classloader-wide and never recover otherwise.
+            spool.discard();
+            throw err;
         }
     }
 
@@ -782,9 +785,13 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             if (tempFile != null) {
                 return new FileEntity(tempFile, contentType);
             }
-            byte[] data = memory == null ? new byte[0] : memory.takeBuffer();
+            if (memory == null) {
+                return new ByteArrayEntity(new byte[0], contentType);
+            }
+            TransferByteArrayOutputStream buffered = memory;
             memory = null;
-            return new ByteArrayEntity(data, contentType);
+            // Hand the internal buffer to the entity without copying.
+            return new ByteArrayEntity(buffered.rawBuffer(), 0, buffered.size(), contentType);
         }
 
         long getSize() {
@@ -807,22 +814,18 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     static final AtomicBoolean FORCE_TEMP_DELETE_FAILURE_FOR_TESTS = new AtomicBoolean();
 
     /**
-     * ByteArrayOutputStream that can hand off its buffer without an extra copy
-     * when the buffer is exactly full.
+     * ByteArrayOutputStream that exposes its internal buffer so the request
+     * entity can reference it directly (with {@link #size()} as the length)
+     * instead of paying the {@code toByteArray()} copy.
      */
     private static final class TransferByteArrayOutputStream extends ByteArrayOutputStream {
         TransferByteArrayOutputStream(int size) {
             super(size);
         }
 
-        synchronized byte[] takeBuffer() {
-            if (count == buf.length) {
-                byte[] exact = buf;
-                buf = new byte[0];
-                count = 0;
-                return exact;
-            }
-            return toByteArray();
+        /** Caller must stop writing once the buffer has been handed off. */
+        synchronized byte[] rawBuffer() {
+            return buf;
         }
     }
 }

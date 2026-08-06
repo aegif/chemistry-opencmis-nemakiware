@@ -188,7 +188,10 @@ HTTP invokers:
      - max concurrent materializations: 32
        (`...binding.http.requestspoolmaxconcurrent`)
      - max total active body bytes (heap + disk): 20 GiB
-       (`...binding.http.requestspoolmaxtotalbytes`)
+       (`...binding.http.requestspoolmaxtotalbytes`); when exhausted, new
+       bodies wait up to the connection-request timeout for budget instead
+       of failing immediately (only a body that alone exceeds the budget
+       fails fast)
  - Explicit alternatives (session parameter
    `org.apache.chemistry.opencmis.binding.httpinvoker.class`):
    - `...spi.http.OkHttpHttpInvoker` (OkHttp 5 / okhttp-jvm; recommended on Android)

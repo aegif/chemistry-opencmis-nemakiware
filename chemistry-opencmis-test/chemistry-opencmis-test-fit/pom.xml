@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.1.5-nemakiware</version>
+        <version>1.1.6-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -35,7 +35,7 @@
 
     <properties>
         <parentBasedir>../../</parentBasedir>
-        <tomcat.version>7.0.75</tomcat.version>
+        <tomcat.version>10.1.39</tomcat.version>
         <overlay.groupId />
         <overlay.artifactId />
         <factory.class />
@@ -159,13 +159,19 @@
         <!-- Test -->
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <version>${tomcat.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-jasper</artifactId>
             <version>${tomcat.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-logging-juli</artifactId>
+            <artifactId>tomcat-embed-websocket</artifactId>
             <version>${tomcat.version}</version>
             <scope>test</scope>
         </dependency>

@@ -87,16 +87,17 @@ Compared with phase 4 (`1.1.3-nemakiware`):
 
 NemakiWare consumption remains out of scope for phase 5.
 
-Phase 6 modernization notes (1.1.5-nemakiware)
+Phase 6 modernization notes (1.1.6-nemakiware)
 ==============================================
 
 Compared with phase 5 (`1.1.4-nemakiware`):
 
- - Artifact version: `1.1.5-nemakiware`
+ - Artifact version: `1.1.6-nemakiware` (6a was `1.1.5-nemakiware`)
  - TCK main (`AbstractCmisTest`, `AbstractCmisTestGroup`,
    `JUnitHelper`) switched from JUnit 4 to JUnit Jupiter API
  - Parent test-scoped `junit:junit` removed; TCK depends on
    `junit-jupiter-api` instead
+ - FIT embedded Tomcat upgraded from 7.0.75 to 10.1.39 (Jakarta)
 
 NemakiWare consumption remains out of scope for phase 6.
 

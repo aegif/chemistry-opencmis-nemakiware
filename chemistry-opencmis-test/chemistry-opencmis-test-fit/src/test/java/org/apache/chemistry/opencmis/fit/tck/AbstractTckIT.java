@@ -111,9 +111,13 @@ public abstract class AbstractTckIT extends AbstractRunner {
     @BeforeAll
     public static void startTomcat() throws LifecycleException, InterruptedException {
         File targetDir = new File(System.getProperty("project.build.directory", "./target"));
+        File[] children = targetDir.listFiles();
+        if (children == null) {
+            throw new RuntimeException("Build directory not found: " + targetDir.getAbsolutePath());
+        }
 
         File warFile = null;
-        for (File child : targetDir.listFiles()) {
+        for (File child : children) {
             if (child.getName().endsWith(".war")) {
                 warFile = child;
             }
@@ -136,6 +140,8 @@ public abstract class AbstractTckIT extends AbstractRunner {
         tomcat = new Tomcat();
         tomcat.setBaseDir(tomcateBaseDir.getAbsolutePath());
         tomcat.setPort(getPort());
+        // Tomcat 9+/10 embed requires an explicit connector before start.
+        tomcat.getConnector();
         // tomcat.setSilent(true);
         tomcat.getHost().setCreateDirs(true);
         tomcat.getHost().setDeployOnStartup(true);
@@ -157,7 +163,7 @@ public abstract class AbstractTckIT extends AbstractRunner {
             appDir.mkdir();
         }
 
-        tomcat.addWebapp(null, "/opencmis", warFile.getAbsolutePath());
+        tomcat.addWebapp("/opencmis", warFile.getAbsolutePath());
         tomcat.init();
         tomcat.start();
 
@@ -170,7 +176,8 @@ public abstract class AbstractTckIT extends AbstractRunner {
             Thread.sleep(500);
         }
 
-        Thread.sleep(5000);
+        // Short settle wait; readiness is primarily the STARTED poll above.
+        Thread.sleep(1000);
     }
 
     @AfterAll

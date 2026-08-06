@@ -18,13 +18,16 @@
  */
 package org.apache.chemistry.opencmis.client.bindings.misc;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.client.bindings.spi.local.LocalCallContext;
 import org.apache.chemistry.opencmis.commons.server.CallContext;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import org.junit.jupiter.api.Test;
 
-public class LocalCallContextTest extends TestCase {
+public class LocalCallContextTest {
 
+    @Test
     public void testLocalCallContextSimple() {
         LocalCallContext lcc = new LocalCallContext("repId", "user", "password");
 
@@ -37,6 +40,7 @@ public class LocalCallContextTest extends TestCase {
         assertNull(lcc.getLocale());
     }
 
+    @Test
     public void testLocalCallContextLang() {
         LocalCallContext lcc = new LocalCallContext("repId", "user", "password", "de", null);
 
@@ -49,6 +53,7 @@ public class LocalCallContextTest extends TestCase {
         assertEquals("de", lcc.getLocale());
     }
 
+    @Test
     public void testLocalCallContextLangCountry() {
         LocalCallContext lcc = new LocalCallContext("repId", "user", "password", "de", "ch");
 

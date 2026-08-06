@@ -18,8 +18,8 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,7 +31,7 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.server.impl.browser.POSTHttpServletRequestWrapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class POSTHttpServletRequestWrapperTest {
 

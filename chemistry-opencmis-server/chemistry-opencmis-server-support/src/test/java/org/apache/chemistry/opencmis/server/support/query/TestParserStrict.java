@@ -18,19 +18,19 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestParserStrict extends AbstractParserTest {
 
-    @Before
+    @BeforeEach
     public void setUp() {
         super.setUp(CmisQlStrictLexer.class, CmisQlStrictParser.class, "CmisBaseGrammar", "CmisBaseLexer");
     }
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }

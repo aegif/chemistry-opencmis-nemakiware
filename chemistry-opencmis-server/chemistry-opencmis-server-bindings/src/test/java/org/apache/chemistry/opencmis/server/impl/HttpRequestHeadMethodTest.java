@@ -46,9 +46,9 @@ import org.apache.chemistry.opencmis.server.impl.atompub.AbstractAtomPubServiceC
 import org.apache.chemistry.opencmis.server.impl.atompub.CmisAtomPubServlet;
 import org.apache.chemistry.opencmis.server.impl.browser.CmisBrowserBindingServlet;
 import org.apache.chemistry.opencmis.server.shared.Dispatcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -81,7 +81,7 @@ public class HttpRequestHeadMethodTest {
 
     private AutoCloseable mocks;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         mocks = MockitoAnnotations.openMocks(this);
         when(this.request.getScheme()).thenReturn(BACKEND_SERVER_PROTO);
@@ -93,7 +93,7 @@ public class HttpRequestHeadMethodTest {
         when(cmisServiceFactory.getService(any(CallContext.class))).thenReturn(cmisService);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (mocks != null) {
             mocks.close();

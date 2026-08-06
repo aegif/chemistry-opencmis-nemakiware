@@ -72,6 +72,21 @@ Compared with phase 3 (`1.1.2-nemakiware`):
 
 NemakiWare consumption remains out of scope for phase 4.
 
+Phase 5 modernization notes (1.1.4-nemakiware)
+==============================================
+
+Compared with phase 4 (`1.1.3-nemakiware`):
+
+ - Artifact version: `1.1.4-nemakiware`
+ - Unit/integration test sources migrated from JUnit 4 / TestCase to
+   JUnit Jupiter 5.14.4 (`@Test`, `@BeforeEach` / `@AfterEach`,
+   `Assertions` / `Assumptions`, `assertThrows`)
+ - `junit-vintage-engine` removed from the parent test classpath
+ - `junit:junit` remains for `chemistry-opencmis-test-tck` main sources
+   (TCK runner API still exposes JUnit 4 annotations)
+
+NemakiWare consumption remains out of scope for phase 5.
+
 Client-Bindings Integration Tests
 =================================
 

@@ -18,11 +18,11 @@
  */
 package org.apache.chemistry.opencmis.inmemory.query;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -40,9 +40,9 @@ import org.apache.chemistry.opencmis.server.support.query.CmisSelector;
 import org.apache.chemistry.opencmis.server.support.query.ColumnReference;
 import org.apache.chemistry.opencmis.server.support.query.QueryObject;
 import org.apache.chemistry.opencmis.server.support.query.QueryObject.SortSpec;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,7 @@ public class QueryTypesTest extends AbstractQueryTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         tm = new TypeManagerImpl();
         tm.initTypeSystem(null, true); // create CMIS default types
@@ -79,7 +79,7 @@ public class QueryTypesTest extends AbstractQueryTest {
         super.setUp(tm, pw);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
     }
 

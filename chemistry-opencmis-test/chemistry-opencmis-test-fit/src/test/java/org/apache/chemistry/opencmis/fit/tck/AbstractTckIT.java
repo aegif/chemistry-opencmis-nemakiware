@@ -19,9 +19,9 @@
 package org.apache.chemistry.opencmis.fit.tck;
 
 import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNullOrEmpty;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.util.HashMap;
@@ -45,10 +45,10 @@ import org.apache.chemistry.opencmis.tck.CmisTestResultStatus;
 import org.apache.chemistry.opencmis.tck.impl.TestParameters;
 import org.apache.chemistry.opencmis.tck.report.TextReport;
 import org.apache.chemistry.opencmis.tck.runner.AbstractRunner;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractTckIT extends AbstractRunner {
     public static final String TEST = "org.apache.chemistry.opencmis.tck.test";
@@ -108,7 +108,7 @@ public abstract class AbstractTckIT extends AbstractRunner {
     private static Tomcat tomcat;
     private static File tomcateBaseDir;
 
-    @BeforeClass
+    @BeforeAll
     public static void startTomcat() throws LifecycleException, InterruptedException {
         File targetDir = new File(System.getProperty("project.build.directory", "./target"));
 
@@ -173,7 +173,7 @@ public abstract class AbstractTckIT extends AbstractRunner {
         Thread.sleep(5000);
     }
 
-    @AfterClass
+    @AfterAll
     public static void stopTomcat() throws LifecycleException, InterruptedException {
         tomcat.stop();
         tomcat.destroy();
@@ -211,30 +211,30 @@ public abstract class AbstractTckIT extends AbstractRunner {
         }
     }
 
-    @Before
+    @BeforeEach
     public void checkTest() {
-        assumeTrue("Skipping all TCK tests.", getSystemPropertyBoolean(TEST));
+        assumeTrue(getSystemPropertyBoolean(TEST), "Skipping all TCK tests.");
 
         if (getCmisVersion() == CmisVersion.CMIS_1_0) {
-            assumeTrue("Skipping CMIS 1.0 TCK tests.", getSystemPropertyBoolean(TEST_CMIS_1_0));
+            assumeTrue(getSystemPropertyBoolean(TEST_CMIS_1_0), "Skipping CMIS 1.0 TCK tests.");
         } else if (getCmisVersion() == CmisVersion.CMIS_1_1) {
-            assumeTrue("Skipping CMIS 1.1 TCK tests.", getSystemPropertyBoolean(TEST_CMIS_1_1));
+            assumeTrue(getSystemPropertyBoolean(TEST_CMIS_1_1), "Skipping CMIS 1.1 TCK tests.");
         }
 
         if (getBindingType() == BindingType.ATOMPUB) {
-            assumeTrue("Skipping AtomPub binding TCK tests.", getSystemPropertyBoolean(TEST_ATOMPUB));
+            assumeTrue(getSystemPropertyBoolean(TEST_ATOMPUB), "Skipping AtomPub binding TCK tests.");
         } else if (getBindingType() == BindingType.WEBSERVICES) {
-            assumeTrue("Skipping Web Services binding TCK tests.", getSystemPropertyBoolean(TEST_WEBSERVICES));
+            assumeTrue(getSystemPropertyBoolean(TEST_WEBSERVICES), "Skipping Web Services binding TCK tests.");
         } else if (getBindingType() == BindingType.BROWSER) {
-            assumeTrue("Skipping Browser binding TCK tests.", getSystemPropertyBoolean(TEST_BROWSER));
+            assumeTrue(getSystemPropertyBoolean(TEST_BROWSER), "Skipping Browser binding TCK tests.");
         }
 
         if (usesVersionableDocumentType()) {
-            assumeTrue("Skipping TCK tests with versionable document types.",
-                    getSystemPropertyBoolean(TEST_VERSIONABLE));
+            assumeTrue(getSystemPropertyBoolean(TEST_VERSIONABLE),
+                    "Skipping TCK tests with versionable document types.");
         } else {
-            assumeTrue("Skipping TCK tests with non-versionable document types.",
-                    getSystemPropertyBoolean(TEST_NOT_VERSIONABLE));
+            assumeTrue(getSystemPropertyBoolean(TEST_NOT_VERSIONABLE),
+                    "Skipping TCK tests with non-versionable document types.");
         }
     }
 
@@ -263,13 +263,13 @@ public abstract class AbstractTckIT extends AbstractRunner {
         for (CmisTestGroup group : getGroups()) {
             for (CmisTest test : group.getTests()) {
                 for (CmisTestResult result : test.getResults()) {
-                    assertNotNull("The test '" + test.getName() + "' returned an invalid result.", result);
-                    assertTrue("The test '" + test.getName() + "' returned a failure: " + result.getMessage(),
-                            result.getStatus() != CmisTestResultStatus.FAILURE);
+                    assertNotNull(result, "The test '" + test.getName() + "' returned an invalid result.");
+                    assertTrue(result.getStatus() != CmisTestResultStatus.FAILURE,
+                            "The test '" + test.getName() + "' returned a failure: " + result.getMessage());
                     assertTrue(
+                            result.getStatus() != CmisTestResultStatus.UNEXPECTED_EXCEPTION,
                             "The test '" + test.getName() + "' returned at an unexcepted exception: "
-                                    + result.getMessage(),
-                            result.getStatus() != CmisTestResultStatus.UNEXPECTED_EXCEPTION);
+                                    + result.getMessage());
                 }
             }
         }

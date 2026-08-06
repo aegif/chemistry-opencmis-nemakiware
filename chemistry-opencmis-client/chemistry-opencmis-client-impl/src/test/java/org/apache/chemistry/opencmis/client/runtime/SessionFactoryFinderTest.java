@@ -18,8 +18,9 @@
  */
 package org.apache.chemistry.opencmis.client.runtime;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ import org.apache.chemistry.opencmis.client.api.Repository;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.api.SessionFactory;
 import org.apache.chemistry.opencmis.commons.endpoints.CmisAuthentication;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SessionFactoryFinderTest {
 
@@ -59,11 +60,12 @@ public class SessionFactoryFinderTest {
         assertTrue(sf instanceof MockSessionFactory1);
     }
 
-    @Test(expected = ClassNotFoundException.class)
-    public void testFindWithProperty2() throws ClassNotFoundException, InstantiationException {
+    @Test
+    public void testFindWithProperty2() {
         System.setProperty("org.apache.chemistry.test.sessionfactory2", SessionFactoryFinderTest.class.getName());
 
-        SessionFactoryFinder.find("org.apache.chemistry.test.sessionfactory2");
+        assertThrows(ClassNotFoundException.class,
+                () -> SessionFactoryFinder.find("org.apache.chemistry.test.sessionfactory2"));
     }
 
     @Test()

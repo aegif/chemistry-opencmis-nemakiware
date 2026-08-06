@@ -566,12 +566,7 @@
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
+        <!-- junit:junit remains for chemistry-opencmis-test-tck main sources (TCK API). -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

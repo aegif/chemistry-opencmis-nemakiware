@@ -19,6 +19,12 @@
 package org.apache.chemistry.opencmis.client.bindings.framework;
 
 import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNotEmpty;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -185,7 +191,7 @@ public abstract class AbstractSimpleReadOnlyTests extends AbstractCmisTestCase {
 
         ObjectData rootFolderObject = getObject(rootFolder);
         String rootPath = getPath(rootFolderObject);
-        assertEquals("Root path is not \"/\"!", "/", rootPath);
+        assertEquals("/", rootPath, "Root path is not \"/\"!");
         assertAllowableAction(rootFolderObject.getAllowableActions(), Action.CAN_GET_OBJECT_PARENTS, false);
 
         ObjectData folderObject = getObject(testRootFolder);

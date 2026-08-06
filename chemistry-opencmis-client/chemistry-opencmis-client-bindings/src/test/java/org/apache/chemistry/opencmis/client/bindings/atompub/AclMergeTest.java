@@ -22,8 +22,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.AbstractAtomPubService;
 import org.apache.chemistry.opencmis.commons.data.Ace;
@@ -36,8 +41,9 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.AccessControlPrinc
  * Test for the ACL merging that is necessary in the AtomPub binding
  * implementation.
  */
-public class AclMergeTest extends TestCase {
+public class AclMergeTest {
 
+    @Test
     public void testIsACLMergeRequired() {
         AtomPubService service = new AtomPubService();
 
@@ -47,6 +53,7 @@ public class AclMergeTest extends TestCase {
         assertFalse(service.publicIsACLMergeRequired(new AccessControlListImpl(), new AccessControlListImpl()));
     }
 
+    @Test
     public void testAclMerge() {
         AtomPubService service = new AtomPubService();
 

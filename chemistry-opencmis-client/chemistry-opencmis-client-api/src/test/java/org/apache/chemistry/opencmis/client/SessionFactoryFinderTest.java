@@ -18,12 +18,14 @@
  */
 package org.apache.chemistry.opencmis.client;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.Test;
 
 public class SessionFactoryFinderTest {
 
-    @Test(expected = ClassNotFoundException.class)
-    public void testFind() throws ClassNotFoundException, InstantiationException {
-        SessionFactoryFinder.find();
+    @Test
+    public void testFind() {
+        assertThrows(ClassNotFoundException.class, () -> SessionFactoryFinder.find());
     }
 }

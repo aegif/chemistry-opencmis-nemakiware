@@ -18,9 +18,9 @@
  */
 package org.apache.chemistry.opencmis.inmemory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -57,9 +57,9 @@ import org.apache.chemistry.opencmis.commons.spi.Holder;
 import org.apache.chemistry.opencmis.inmemory.storedobj.api.ObjectStore;
 import org.apache.chemistry.opencmis.inmemory.storedobj.impl.InMemoryAce;
 import org.apache.chemistry.opencmis.server.support.query.CalendarHelper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,13 +91,13 @@ public class AclPermissionsTest extends AbstractServiceTest {
     protected static Map<String, String> idMap = new HashMap<String, String>();
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }
 
     @Override
-    @Before
+    @BeforeEach
     public void setUp() {
         super.setTypeCreatorClass(UnitTestTypeSystemCreator.class.getName());
         super.setUp();
@@ -1139,12 +1139,12 @@ public class AclPermissionsTest extends AbstractServiceTest {
                 found = true;
             }
         }
-        assertTrue("Failed to find folder id " + id, found);
+        assertTrue(found, "Failed to find folder id " + id);
     }
 
     private void assertObjectInFolderContainerIds(List<ObjectInFolderContainer> folderList, String id) {
         boolean found = objectInFolderContainerHasId(folderList, id);
-        assertTrue("Failed to find folder id " + id, found);
+        assertTrue(found, "Failed to find folder id " + id);
     }
 
     private boolean objectInFolderContainerHasId(List<ObjectInFolderContainer> folderList, String id) {
@@ -1169,7 +1169,7 @@ public class AclPermissionsTest extends AbstractServiceTest {
             }
 
         }
-        assertTrue("Failed to find object id " + id, found);
+        assertTrue(found, "Failed to find object id " + id);
     }
 
 }

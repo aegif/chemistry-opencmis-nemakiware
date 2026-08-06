@@ -19,6 +19,11 @@
 package org.apache.chemistry.opencmis.client.bindings.framework;
 
 import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNotEmpty;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,7 +35,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.Ace;
@@ -71,7 +75,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Base test case for CMIS tests.
  */
-public abstract class AbstractCmisTestCase extends TestCase {
+public abstract class AbstractCmisTestCase {
 
     public static final String DEFAULT_TESTS_ENABLED = "true";
     public static final String DEFAULT_USERNAME = "admin";
@@ -849,6 +853,60 @@ public abstract class AbstractCmisTestCase extends TestCase {
 
     // ---- asserts ----
 
+    // General asserts (restore TestCase-style instance methods so custom
+    // assertEquals(domain, domain) overloads do not hide Jupiter static imports).
+    protected final void assertEquals(Object expected, Object actual) {
+        org.junit.jupiter.api.Assertions.assertEquals(expected, actual);
+    }
+
+    protected final void assertEquals(Object expected, Object actual, String message) {
+        org.junit.jupiter.api.Assertions.assertEquals(expected, actual, message);
+    }
+
+    protected final void assertEquals(long expected, long actual) {
+        org.junit.jupiter.api.Assertions.assertEquals(expected, actual);
+    }
+
+    protected final void assertEquals(long expected, long actual, String message) {
+        org.junit.jupiter.api.Assertions.assertEquals(expected, actual, message);
+    }
+
+    protected final void assertTrue(boolean condition) {
+        org.junit.jupiter.api.Assertions.assertTrue(condition);
+    }
+
+    protected final void assertTrue(boolean condition, String message) {
+        org.junit.jupiter.api.Assertions.assertTrue(condition, message);
+    }
+
+    protected final void assertFalse(boolean condition) {
+        org.junit.jupiter.api.Assertions.assertFalse(condition);
+    }
+
+    protected final void assertFalse(boolean condition, String message) {
+        org.junit.jupiter.api.Assertions.assertFalse(condition, message);
+    }
+
+    protected final void assertNotNull(Object object) {
+        org.junit.jupiter.api.Assertions.assertNotNull(object);
+    }
+
+    protected final void assertNotNull(Object object, String message) {
+        org.junit.jupiter.api.Assertions.assertNotNull(object, message);
+    }
+
+    protected final void assertNull(Object object) {
+        org.junit.jupiter.api.Assertions.assertNull(object);
+    }
+
+    protected final void assertNull(Object object, String message) {
+        org.junit.jupiter.api.Assertions.assertNull(object, message);
+    }
+
+    protected final void fail(String message) {
+        org.junit.jupiter.api.Assertions.fail(message);
+    }
+
     protected void assertEquals(TypeDefinition expected, TypeDefinition actual, boolean checkPropertyDefintions) {
         if (expected == null && actual == null) {
             return;
@@ -862,14 +920,14 @@ public abstract class AbstractCmisTestCase extends TestCase {
             fail("Actual type definition is null!");
         }
 
-        assertEquals("TypeDefinition id:", expected.getId(), actual.getId());
-        assertEquals("TypeDefinition local name:", expected.getLocalName(), actual.getLocalName());
-        assertEquals("TypeDefinition local namespace:", expected.getLocalNamespace(), actual.getLocalNamespace());
-        assertEquals("TypeDefinition display name:", expected.getDisplayName(), actual.getDisplayName());
-        assertEquals("TypeDefinition description:", expected.getDescription(), actual.getDescription());
-        assertEquals("TypeDefinition query name:", expected.getQueryName(), actual.getQueryName());
-        assertEquals("TypeDefinition parent id:", expected.getParentTypeId(), actual.getParentTypeId());
-        assertEquals("TypeDefinition base id:", expected.getBaseTypeId(), actual.getBaseTypeId());
+        assertEquals(expected.getId(), actual.getId(), "TypeDefinition id:");
+        assertEquals(expected.getLocalName(), actual.getLocalName(), "TypeDefinition local name:");
+        assertEquals(expected.getLocalNamespace(), actual.getLocalNamespace(), "TypeDefinition local namespace:");
+        assertEquals(expected.getDisplayName(), actual.getDisplayName(), "TypeDefinition display name:");
+        assertEquals(expected.getDescription(), actual.getDescription(), "TypeDefinition description:");
+        assertEquals(expected.getQueryName(), actual.getQueryName(), "TypeDefinition query name:");
+        assertEquals(expected.getParentTypeId(), actual.getParentTypeId(), "TypeDefinition parent id:");
+        assertEquals(expected.getBaseTypeId(), actual.getBaseTypeId(), "TypeDefinition base id:");
 
         if (!checkPropertyDefintions) {
             return;
@@ -914,18 +972,15 @@ public abstract class AbstractCmisTestCase extends TestCase {
 
         String id = expected.getId();
 
-        assertEquals("PropertyDefinition " + id + " id:", expected.getId(), actual.getId());
-        assertEquals("PropertyDefinition " + id + " local name:", expected.getLocalName(), actual.getLocalName());
-        assertEquals("PropertyDefinition " + id + " local namespace:", expected.getLocalNamespace(),
-                actual.getLocalNamespace());
-        assertEquals("PropertyDefinition " + id + " query name:", expected.getQueryName(), actual.getQueryName());
-        assertEquals("PropertyDefinition " + id + " display name:", expected.getDisplayName(), actual.getDisplayName());
-        assertEquals("PropertyDefinition " + id + " description:", expected.getDescription(), actual.getDescription());
-        assertEquals("PropertyDefinition " + id + " property type:", expected.getPropertyType(),
-                actual.getPropertyType());
-        assertEquals("PropertyDefinition " + id + " cardinality:", expected.getCardinality(), actual.getCardinality());
-        assertEquals("PropertyDefinition " + id + " updatability:", expected.getUpdatability(),
-                actual.getUpdatability());
+        assertEquals(expected.getId(), actual.getId(), "PropertyDefinition " + id + " id:");
+        assertEquals(expected.getLocalName(), actual.getLocalName(), "PropertyDefinition " + id + " local name:");
+        assertEquals(expected.getLocalNamespace(), actual.getLocalNamespace(), "PropertyDefinition " + id + " local namespace:");
+        assertEquals(expected.getQueryName(), actual.getQueryName(), "PropertyDefinition " + id + " query name:");
+        assertEquals(expected.getDisplayName(), actual.getDisplayName(), "PropertyDefinition " + id + " display name:");
+        assertEquals(expected.getDescription(), actual.getDescription(), "PropertyDefinition " + id + " description:");
+        assertEquals(expected.getPropertyType(), actual.getPropertyType(), "PropertyDefinition " + id + " property type:");
+        assertEquals(expected.getCardinality(), actual.getCardinality(), "PropertyDefinition " + id + " cardinality:");
+        assertEquals(expected.getUpdatability(), actual.getUpdatability(), "PropertyDefinition " + id + " updatability:");
     }
 
     protected void assertEquals(Properties expected, Properties actual) {
@@ -983,16 +1038,16 @@ public abstract class AbstractCmisTestCase extends TestCase {
 
         String id = expected.getId();
 
-        assertEquals("PropertyData " + id + " id:", expected.getId(), actual.getId());
-        assertEquals("PropertyData " + id + " display name:", expected.getDisplayName(), actual.getDisplayName());
-        assertEquals("PropertyData " + id + " local name:", expected.getLocalName(), actual.getLocalName());
-        assertEquals("PropertyData " + id + " query name:", expected.getQueryName(), actual.getQueryName());
+        assertEquals(expected.getId(), actual.getId(), "PropertyData " + id + " id:");
+        assertEquals(expected.getDisplayName(), actual.getDisplayName(), "PropertyData " + id + " display name:");
+        assertEquals(expected.getLocalName(), actual.getLocalName(), "PropertyData " + id + " local name:");
+        assertEquals(expected.getQueryName(), actual.getQueryName(), "PropertyData " + id + " query name:");
 
-        assertEquals("PropertyData " + id + " values:", expected.getValues().size(), actual.getValues().size());
+        assertEquals(expected.getValues().size(), actual.getValues().size(), "PropertyData " + id + " values:");
 
         for (int i = 0; i < expected.getValues().size(); i++) {
-            assertEquals("PropertyData " + id + " value[" + i + "]:", expected.getValues().get(i), actual.getValues()
-                    .get(i));
+            assertEquals(expected.getValues().get(i), actual.getValues()
+                    .get(i), "PropertyData " + id + " value[" + i + "]:");
         }
     }
 
@@ -1019,7 +1074,7 @@ public abstract class AbstractCmisTestCase extends TestCase {
     protected void assertProperty(PropertyData<?> property, String id, Class<?> clazz) {
         assertNotNull(property);
         assertNotNull(property.getId());
-        assertEquals("PropertyData " + id + " id:", id, property.getId());
+        assertEquals(id, property.getId(), "PropertyData " + id + " id:");
         assertTrue(clazz.isAssignableFrom(property.getClass()));
         assertNotNull(property.getValues());
         assertFalse(property.getValues().isEmpty());
@@ -1028,11 +1083,11 @@ public abstract class AbstractCmisTestCase extends TestCase {
     protected void assertPropertyValue(PropertyData<?> property, String id, Class<?> clazz, Object... values) {
         assertProperty(property, id, clazz);
 
-        assertEquals("Property " + id + " values:", values.length, property.getValues().size());
+        assertEquals(values.length, property.getValues().size(), "Property " + id + " values:");
 
         int i = 0;
         for (Object value : property.getValues()) {
-            assertEquals("Property " + id + " value[" + i + "]:", values[i], value);
+            assertEquals(values[i], value, "Property " + id + " value[" + i + "]:");
             i++;
         }
     }
@@ -1063,14 +1118,14 @@ public abstract class AbstractCmisTestCase extends TestCase {
         assertNotNull(expected.getAllowableActions());
         assertNotNull(actual.getAllowableActions());
 
-        assertEquals("Allowable action size:", expected.getAllowableActions().size(), actual.getAllowableActions()
-                .size());
+        assertEquals(expected.getAllowableActions().size(), actual.getAllowableActions()
+                .size(), "Allowable action size:");
 
         for (Action action : expected.getAllowableActions()) {
             boolean expectedBoolean = expected.getAllowableActions().contains(action);
             boolean actualBoolean = actual.getAllowableActions().contains(action);
 
-            assertEquals("AllowableAction " + action + ":", expectedBoolean, actualBoolean);
+            assertEquals(expectedBoolean, actualBoolean, "AllowableAction " + action + ":");
         }
     }
 
@@ -1079,8 +1134,7 @@ public abstract class AbstractCmisTestCase extends TestCase {
         assertNotNull(allowableActions.getAllowableActions());
         assertNotNull(action);
 
-        assertEquals("Allowable action \"" + action + "\":", expected,
-                allowableActions.getAllowableActions().contains(action));
+        assertEquals(expected, allowableActions.getAllowableActions().contains(action), "Allowable action \"" + action + "\":");
     }
 
     protected void assertEquals(Acl expected, Acl actual) {
@@ -1133,7 +1187,7 @@ public abstract class AbstractCmisTestCase extends TestCase {
         assertNotNull(expected.getPrincipal().getId());
         assertNotNull(actual.getPrincipal());
         assertNotNull(actual.getPrincipal().getId());
-        assertEquals("ACE Principal:", expected.getPrincipal().getId(), actual.getPrincipal().getId());
+        assertEquals(expected.getPrincipal().getId(), actual.getPrincipal().getId(), "ACE Principal:");
 
         assertEqualLists(expected.getPermissions(), actual.getPermissions());
     }
@@ -1151,24 +1205,24 @@ public abstract class AbstractCmisTestCase extends TestCase {
             fail("Actual rendition is null!");
         }
 
-        assertEquals("Rendition kind:", expected.getKind(), actual.getKind());
-        assertEquals("Rendition MIME type:", expected.getMimeType(), actual.getMimeType());
-        assertEquals("Rendition length:", expected.getBigLength(), actual.getBigLength());
-        assertEquals("Rendition stream id:", expected.getStreamId(), actual.getStreamId());
-        assertEquals("Rendition title:", expected.getTitle(), actual.getTitle());
-        assertEquals("Rendition height:", expected.getBigHeight(), actual.getBigHeight());
-        assertEquals("Rendition width:", expected.getBigWidth(), actual.getBigWidth());
-        assertEquals("Rendition document id:", expected.getRenditionDocumentId(), actual.getRenditionDocumentId());
+        assertEquals(expected.getKind(), actual.getKind(), "Rendition kind:");
+        assertEquals(expected.getMimeType(), actual.getMimeType(), "Rendition MIME type:");
+        assertEquals(expected.getBigLength(), actual.getBigLength(), "Rendition length:");
+        assertEquals(expected.getStreamId(), actual.getStreamId(), "Rendition stream id:");
+        assertEquals(expected.getTitle(), actual.getTitle(), "Rendition title:");
+        assertEquals(expected.getBigHeight(), actual.getBigHeight(), "Rendition height:");
+        assertEquals(expected.getBigWidth(), actual.getBigWidth(), "Rendition width:");
+        assertEquals(expected.getRenditionDocumentId(), actual.getRenditionDocumentId(), "Rendition document id:");
     }
 
     protected void assertContent(byte[] expected, byte[] actual) {
         assertNotNull(expected);
         assertNotNull(actual);
 
-        assertEquals("Content size:", expected.length, actual.length);
+        assertEquals(expected.length, actual.length, "Content size:");
 
         for (int i = 0; i < expected.length; i++) {
-            assertEquals("Content not equal.", expected[i], actual[i]);
+            assertEquals(expected[i], actual[i], "Content not equal.");
         }
     }
 
@@ -1197,10 +1251,10 @@ public abstract class AbstractCmisTestCase extends TestCase {
             fail("Actual list is null!");
         }
 
-        assertEquals("List size:", expected.size(), actual.size());
+        assertEquals(expected.size(), actual.size(), "List size:");
 
         for (int i = 0; i < expected.size(); i++) {
-            assertEquals("List element " + i + ":", expected.get(i), actual.get(i));
+            assertEquals(expected.get(i), actual.get(i), "List element " + i + ":");
         }
     }
 }

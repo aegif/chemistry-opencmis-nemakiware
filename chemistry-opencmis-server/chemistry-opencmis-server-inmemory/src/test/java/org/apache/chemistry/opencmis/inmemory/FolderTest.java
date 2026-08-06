@@ -20,8 +20,10 @@ package org.apache.chemistry.opencmis.inmemory;
 
 import java.util.HashMap;
 import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.inmemory.storedobj.api.Fileable;
 import org.apache.chemistry.opencmis.inmemory.storedobj.api.Filing;
@@ -29,13 +31,13 @@ import org.apache.chemistry.opencmis.inmemory.storedobj.api.Folder;
 import org.apache.chemistry.opencmis.inmemory.storedobj.api.StoredObject;
 import org.apache.chemistry.opencmis.inmemory.storedobj.impl.FolderImpl;
 import org.apache.chemistry.opencmis.inmemory.storedobj.impl.ObjectStoreImpl;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Some test directly against the in-memory folder object.
  */
-public class FolderTest extends TestCase {
+public class FolderTest {
 
     private ObjectStoreImpl fStore;
     private FolderImpl fRoot;
@@ -47,8 +49,7 @@ public class FolderTest extends TestCase {
     private static final String TEST_REPOSITORY_ID = "TestRepositoryId";
     private static final String USER = "user";
 
-    @Override
-    @Before
+    @BeforeEach
     protected void setUp() throws Exception {
         ConfigurationSettings.init(new HashMap<String, String>());
         fStore = new ObjectStoreImpl(TEST_REPOSITORY_ID);

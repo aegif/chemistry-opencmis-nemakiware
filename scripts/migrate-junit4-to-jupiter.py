@@ -110,6 +110,10 @@ def migrate(text: str) -> str:
     if used:
         text = ensure_static_assertion_imports(text, used)
 
+    # Add @Test on public void testXxx() if missing (JUnit3 style)
+    # Must run before ensuring Test import, otherwise newly added @Test lack the import.
+    text = add_missing_test_annotations(text)
+
     # Ensure jupiter Test import if @Test present
     if "@Test" in text and "import org.junit.jupiter.api.Test;" not in text:
         text = insert_import(text, "import org.junit.jupiter.api.Test;")
@@ -126,9 +130,6 @@ def migrate(text: str) -> str:
     if "@Disabled" in text and "import org.junit.jupiter.api.Disabled;" not in text:
         text = insert_import(text, "import org.junit.jupiter.api.Disabled;")
 
-    # Add @Test on public void testXxx() if missing (JUnit3 style)
-    text = add_missing_test_annotations(text)
-
     if text != original and "junit.framework" in text:
         # leave marker for manual review if residual framework refs remain
         pass
@@ -137,8 +138,9 @@ def migrate(text: str) -> str:
 
 
 def annotate_lifecycle(text: str, method: str, annotation: str) -> str:
+    # Only no-arg lifecycle methods (JUnit requires no parameters).
     pattern = re.compile(
-        rf"(^[ \t]*)((?:public|protected)\s+void\s+{method}\s*\()",
+        rf"(^[ \t]*)((?:public|protected)\s+void\s+{method}\s*\(\s*\))",
         re.MULTILINE,
     )
 
@@ -147,7 +149,7 @@ def annotate_lifecycle(text: str, method: str, annotation: str) -> str:
         # already annotated immediately above?
         start = m.start()
         before = m.string[max(0, start - 80) : start]
-        if f"@{annotation}" in before.splitlines()[-3:]:
+        if any(f"@{annotation}" in line for line in before.splitlines()[-3:]):
             return m.group(0)
         # if @Before/@After old form somehow remains on previous line
         return f"{indent}@{annotation}\n{indent}{sig}"

@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.Acl;
@@ -40,7 +41,7 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.chemistry.opencmis.commons.spi.BindingsObjectFactory;
 import org.apache.chemistry.opencmis.commons.spi.Holder;
 import org.apache.chemistry.opencmis.commons.spi.ObjectService;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 public class ObjectCreator {
 
@@ -70,7 +71,7 @@ public class ObjectCreator {
         id = fObjSvc.createDocument(fRepositoryId, props, folderId, contentStream, versioningState, policies, addACEs,
                 removeACEs, extension);
         if (null == id) {
-            Assert.fail("createDocument failed.");
+            Assertions.fail("createDocument failed.");
         }
 
         return id;

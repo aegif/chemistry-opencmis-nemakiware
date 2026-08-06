@@ -18,15 +18,15 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Random;
 
 import org.apache.chemistry.opencmis.server.impl.webservices.ProtectionRequestWrapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CheckServletInputStreamTest {
 

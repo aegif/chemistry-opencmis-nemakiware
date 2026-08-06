@@ -18,11 +18,11 @@
  */
 package org.apache.chemistry.opencmis.inmemory.content.loremipsum;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,9 +31,9 @@ import java.io.Reader;
 import java.io.StringWriter;
 
 import org.apache.chemistry.opencmis.inmemory.content.loremipsum.LoremIpsum;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,12 +47,12 @@ public class LoremIpsumTest {
     String dictionary = "a bb ccc dddd eeeee ffffff ggggggg hhhhhhhh iiiiiiiii jjjjjjjjjj kkkkkkkkkkk llllllllllll";
     LoremIpsum generator = new LoremIpsum(sample, dictionary);
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         // dictionary.split(" ");
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
     }
 

@@ -22,13 +22,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.client.bindings.spi.cookies.CmisCookieManager;
 
-public class CookiesTest extends TestCase {
+public class CookiesTest {
 
+    @Test
     public void testCookies() {
         CmisCookieManager manager = new CmisCookieManager();
         String url;

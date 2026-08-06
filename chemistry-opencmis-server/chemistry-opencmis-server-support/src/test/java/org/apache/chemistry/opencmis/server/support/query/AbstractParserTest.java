@@ -18,7 +18,7 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;

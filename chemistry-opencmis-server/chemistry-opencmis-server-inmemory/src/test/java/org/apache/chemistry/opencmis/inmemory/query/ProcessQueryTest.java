@@ -18,9 +18,9 @@
  */
 package org.apache.chemistry.opencmis.inmemory.query;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -34,8 +34,8 @@ import org.apache.chemistry.opencmis.inmemory.TypeManagerImpl;
 import org.apache.chemistry.opencmis.server.support.query.CalendarHelper;
 import org.apache.chemistry.opencmis.server.support.query.CmisQlStrictLexer;
 import org.apache.chemistry.opencmis.server.support.query.TextSearchLexer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -407,7 +407,7 @@ public class ProcessQueryTest extends AbstractQueryTest {
     private TypeManagerImpl tm;
     private TestQueryProcessor queryProcessor;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         tm = new TypeManagerImpl();
         tm.initTypeSystem(null, true); // create CMIS default types
@@ -638,8 +638,7 @@ public class ProcessQueryTest extends AbstractQueryTest {
             if (!e.getKey().equals(ruleAssertion) && !e.getKey().equals("onPropertyValueWasCalled")
                     && !e.getKey().equals(TestQueryProcessor.ON_START)
                     && !e.getKey().equals(TestQueryProcessor.ON_STOP) && !e.getKey().contains("Literal")) {
-                assertFalse("Rule " + e.getKey() + " was expected not to be executed, but was executed.",
-                        queryProcessor.rulesTrackerMap.get(e.getKey()) > 0);
+                assertFalse(queryProcessor.rulesTrackerMap.get(e.getKey()) > 0, "Rule " + e.getKey() + " was expected not to be executed, but was executed.");
             }
         }
     }

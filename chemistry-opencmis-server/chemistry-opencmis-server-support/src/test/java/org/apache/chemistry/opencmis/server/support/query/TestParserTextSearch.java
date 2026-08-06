@@ -18,23 +18,23 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestParserTextSearch extends AbstractParserTest{
 
     //private static final Logger log = LoggerFactory.getLogger(TestParserTextSearch.class);
 
-    @Before
+    @BeforeEach
     public void setUp() {
         super.setUp(TextSearchLexer.class, TextSearchParser.class, null, "CmisBaseLexer");
     }
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }

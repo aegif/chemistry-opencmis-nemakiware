@@ -18,8 +18,8 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
@@ -32,9 +32,9 @@ import org.apache.chemistry.opencmis.commons.server.CallContext;
 import org.apache.chemistry.opencmis.commons.server.CmisService;
 import org.apache.chemistry.opencmis.server.filter.ProxyHttpServletRequestWrapper;
 import org.apache.chemistry.opencmis.server.impl.atompub.AbstractAtomPubServiceCall;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -59,7 +59,7 @@ public class ProxyRequestTest {
 
     private AutoCloseable mocks;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         mocks = MockitoAnnotations.openMocks(this);
         when(this.request.getScheme()).thenReturn(BACKEND_SERVER_PROTO);
@@ -70,7 +70,7 @@ public class ProxyRequestTest {
         when(this.request.getRequestURI()).thenReturn(CONTEXT_PATH + "/" + SERVLET_PATH);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (mocks != null) {
             mocks.close();

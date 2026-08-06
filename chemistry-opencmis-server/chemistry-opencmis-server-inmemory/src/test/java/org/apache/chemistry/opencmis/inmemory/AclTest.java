@@ -18,10 +18,10 @@
  */
 package org.apache.chemistry.opencmis.inmemory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +36,7 @@ import org.apache.chemistry.opencmis.commons.impl.jaxb.EnumBasicPermissions;
 import org.apache.chemistry.opencmis.inmemory.storedobj.impl.InMemoryAce;
 import org.apache.chemistry.opencmis.inmemory.storedobj.impl.InMemoryAcl;
 import org.apache.chemistry.opencmis.inmemory.storedobj.impl.Permission;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,8 +118,8 @@ public class AclTest {
         assertTrue(acl.getAces().get(2) == aceW);
         assertTrue(acl.getAces().get(3) == aceA);
 
-        assertFalse("Adding an existing ACE to an ACL should fail.", acl.addAce(aceN));
-        assertFalse("Adding null to an ACL should fail.", acl.addAce(null));
+        assertFalse(acl.addAce(aceN), "Adding an existing ACE to an ACL should fail.");
+        assertFalse(acl.addAce(null), "Adding null to an ACL should fail.");
     }
 
     @Test
@@ -144,8 +144,8 @@ public class AclTest {
 
         acl = createDefaultAcl();
         final InMemoryAce ace = new InMemoryAce("xyu", Permission.ALL);
-        assertFalse("Removing an unknown ACE from an ACL should fail.", acl.removeAce(ace));
-        assertFalse("Removing null from an ACL should fail.", acl.removeAce(null));
+        assertFalse(acl.removeAce(ace), "Removing an unknown ACE from an ACL should fail.");
+        assertFalse(acl.removeAce(null), "Removing null from an ACL should fail.");
     }
 
     @Test

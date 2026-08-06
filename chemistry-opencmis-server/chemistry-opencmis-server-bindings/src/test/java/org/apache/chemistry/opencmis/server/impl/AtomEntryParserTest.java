@@ -18,10 +18,11 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,7 +38,7 @@ import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.server.impl.atompub.AtomEntryParser;
 import org.apache.chemistry.opencmis.server.shared.TempStoreOutputStreamFactory;
 import org.apache.chemistry.opencmis.server.shared.ThresholdOutputStream.ThresholdInputStream;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * AtomEntryParser test.
@@ -210,11 +211,12 @@ public class AtomEntryParserTest {
         assertNull(aep.getProperties());
     }
 
-    @Test(expected = XMLStreamException.class)
-    public void testEmptyStream() throws Exception {
+    @Test
+    public void testEmptyStream() {
         TempStoreOutputStreamFactory streamFactory = TempStoreOutputStreamFactory.newInstance(null, THRESHOLD,
                 MAX_SIZE, false);
-        new AtomEntryParser(new ByteArrayInputStream(new byte[0]), streamFactory);
+        assertThrows(XMLStreamException.class,
+                () -> new AtomEntryParser(new ByteArrayInputStream(new byte[0]), streamFactory));
     }
 
     @Test

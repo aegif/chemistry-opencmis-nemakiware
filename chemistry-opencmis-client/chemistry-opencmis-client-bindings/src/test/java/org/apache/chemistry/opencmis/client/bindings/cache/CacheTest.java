@@ -18,21 +18,26 @@
  */
 package org.apache.chemistry.opencmis.client.bindings.cache;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.client.bindings.cache.impl.CacheImpl;
 import org.apache.chemistry.opencmis.client.bindings.cache.impl.ContentTypeCacheLevelImpl;
 import org.apache.chemistry.opencmis.client.bindings.cache.impl.LruCacheLevelImpl;
 import org.apache.chemistry.opencmis.client.bindings.cache.impl.MapCacheLevelImpl;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the cache implementation.
  */
-public class CacheTest extends TestCase {
+public class CacheTest {
 
     public static final String MAP_CACHE_LEVEL = "org.apache.chemistry.opencmis.client.bindings.cache.impl.MapCacheLevelImpl";
     public static final String LRU_CACHE_LEVEL = "org.apache.chemistry.opencmis.client.bindings.cache.impl.LruCacheLevelImpl";
 
+    @Test
     public void testCache() {
         Cache cache;
 
@@ -78,6 +83,7 @@ public class CacheTest extends TestCase {
         assertNull(valueObj);
     }
 
+    @Test
     public void testCacheBadUsage() {
         Cache cache;
 
@@ -100,6 +106,7 @@ public class CacheTest extends TestCase {
         assertNull(cache.get((String[]) null));
     }
 
+    @Test
     public void testCacheConfig() {
         Cache cache;
 
@@ -132,6 +139,7 @@ public class CacheTest extends TestCase {
         }
     }
 
+    @Test
     public void testMapCache() {
         Cache cache;
 
@@ -150,6 +158,7 @@ public class CacheTest extends TestCase {
         }
     }
 
+    @Test
     public void testURLCache() {
         Cache cache;
 
@@ -187,6 +196,7 @@ public class CacheTest extends TestCase {
         assertEquals("value1", cache.get("key3"));
     }
 
+    @Test
     public void testContentTypeCache() {
         ContentTypeCacheLevelImpl cl = new ContentTypeCacheLevelImpl();
         cl.initialize(null);

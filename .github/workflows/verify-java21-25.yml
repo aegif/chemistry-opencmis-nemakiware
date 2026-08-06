@@ -35,7 +35,7 @@ jobs:
       - name: Run required-module unit tests
         run: >
           mvn -pl
-          chemistry-opencmis-commons/chemistry-opencmis-commons-api,chemistry-opencmis-commons/chemistry-opencmis-commons-impl,chemistry-opencmis-client/chemistry-opencmis-client-api,chemistry-opencmis-client/chemistry-opencmis-client-bindings,chemistry-opencmis-client/chemistry-opencmis-client-impl,chemistry-opencmis-server/chemistry-opencmis-server-support,chemistry-opencmis-server/chemistry-opencmis-server-bindings,chemistry-opencmis-test/chemistry-opencmis-test-tck
+          chemistry-opencmis-commons/chemistry-opencmis-commons-api,chemistry-opencmis-commons/chemistry-opencmis-commons-impl,chemistry-opencmis-client/chemistry-opencmis-client-api,chemistry-opencmis-client/chemistry-opencmis-client-bindings,chemistry-opencmis-client/chemistry-opencmis-client-impl,chemistry-opencmis-server/chemistry-opencmis-server-support,chemistry-opencmis-server/chemistry-opencmis-server-bindings,chemistry-opencmis-server/chemistry-opencmis-server-inmemory,chemistry-opencmis-test/chemistry-opencmis-test-tck
           -am test -Dopencmis.integration.tests.skip=true
 
       - name: Run server-bindings compatibility smoke tests
@@ -43,3 +43,13 @@ jobs:
           mvn -f chemistry-opencmis-server/chemistry-opencmis-server-bindings/pom.xml
           test
           -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest,MultipartParserTest
+
+      - name: Package Workbench
+        run: >
+          mvn -pl chemistry-opencmis-workbench/chemistry-opencmis-workbench
+          -am package -DskipTests
+
+      - name: Package Android client
+        run: >
+          mvn -pl chemistry-opencmis-android/chemistry-opencmis-android-client
+          -am package -DskipTests

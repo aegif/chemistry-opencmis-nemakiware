@@ -1,0 +1,48 @@
+name: FIT TCK (on demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      java-version:
+        description: Temurin JDK version
+        required: true
+        default: "21"
+        type: choice
+        options:
+          - "21"
+          - "25"
+      it-test:
+        description: Failsafe IT class pattern (JUnit class name)
+        required: true
+        default: AtomPub11NonVersTckIT
+        type: string
+
+jobs:
+  fit-tck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Install reactor (skip tests)
+        run: |
+          mvn -pl chemistry-opencmis-test/chemistry-opencmis-test-fit -am install -DskipTests
+
+      - name: Run selected FIT TCK IT
+        run: >
+          mvn -pl chemistry-opencmis-test/chemistry-opencmis-test-fit
+          failsafe:integration-test failsafe:verify
+          -Dit.test=${{ inputs.it-test }}
+          -Dfailsafe.failIfNoSpecifiedTests=false
+          -Dorg.apache.chemistry.opencmis.tck.testWebServices=false
+          -Dorg.apache.chemistry.opencmis.tck.testBrowser=false
+          -Dorg.apache.chemistry.opencmis.tck.testAtomPub=true
+          -Dorg.apache.chemistry.opencmis.tck.testCmis10=false
+          -Dorg.apache.chemistry.opencmis.tck.testCmis11=true

@@ -30,8 +30,8 @@ import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.S
 import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.SECONDARY_STRING_PROP;
 import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.SECONDARY_TYPE;
 import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.VERSION_PROPERTY_ID;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

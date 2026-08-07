@@ -18,73 +18,70 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
-import org.antlr.runtime.ANTLRStringStream;
-import org.antlr.runtime.BaseRecognizer;
-import org.antlr.runtime.CharStream;
-import org.antlr.runtime.CommonTokenStream;
-import org.antlr.runtime.Lexer;
-import org.antlr.runtime.Token;
-import org.antlr.runtime.TokenStream;
-import org.antlr.runtime.tree.CommonTree;
-import org.antlr.stringtemplate.StringTemplate;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.Lexer;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class is clone of org.antlr.gunit.gUnitBase class adapted to Java style
- * Because the original class can't deal with composite grammar this is a
- * replacement working around this antlr bug.
- * 
+ * ANTLR4-based parser/lexer test harness replacing the ANTLR3 gUnit clone.
  */
 public class AbstractParserTest {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractParserTest.class);
 
-    protected String superGrammarName;
-    protected String baseLexerName;
-    Class<?> lexer;
-    Class<?> parser;
-    protected String treeParserPath;
+    protected enum GrammarKind {
+        STRICT, EXT, TEXT_SEARCH
+    }
+
+    protected GrammarKind kind = GrammarKind.STRICT;
 
     protected void setUp(Class<?> lexerClass, Class<?> parserClass, String baseGrammar, String baseLexer) {
-        lexer = lexerClass;
-        parser = parserClass;
-        this.superGrammarName = baseGrammar;
-        this.baseLexerName = baseLexer;
+        if (lexerClass.getSimpleName().startsWith("TextSearch")) {
+            kind = GrammarKind.TEXT_SEARCH;
+        } else if (lexerClass.getSimpleName().startsWith("CmisQlExt")) {
+            kind = GrammarKind.EXT;
+        } else {
+            kind = GrammarKind.STRICT;
+        }
     }
 
     protected void tearDown() {
     }
 
     protected void testLexerOk(String rule, String statement) {
-        // test input: "a"
         try {
-            Object retval = execLexer(rule, statement);
-            log.debug("testing rule " + rule + " parsed to: " + retval);
+            execLexer(rule, statement);
+            log.debug("testing rule {} parsed ok", rule);
         } catch (Exception e) {
             fail("testing rule " + rule + ": " + e.toString());
         }
     }
 
     protected void testLexerFail(String rule, String statement) {
-        // test input: "a"
         try {
-            Object retval = execLexer(rule, statement);
+            execLexer(rule, statement);
             fail("testing rule should fail " + rule);
         } catch (Exception e) {
-            log.debug("testing rule " + rule + " parsed with exception: " + e);
+            log.debug("testing rule {} parsed with exception: {}", rule, e.toString());
         }
     }
 
     protected void testParserOk(String rule, String statement) {
         try {
             Object retval = execParser(rule, statement);
-            log.debug("testing rule " + rule + " parsed to: " + retval);
+            log.debug("testing rule {} parsed to: {}", rule, retval);
         } catch (Exception e) {
             fail("testing rule " + rule + " failed: " + e.toString());
         }
@@ -92,144 +89,129 @@ public class AbstractParserTest {
 
     protected void testParserFail(String rule, String statement) {
         try {
-            Object retval = execParser(rule, statement);
+            execParser(rule, statement);
             fail("testing rule should fail " + rule);
         } catch (Exception e) {
-            log.debug("testing rule " + rule + " failed: " + e.toString());
+            log.debug("testing rule {} failed: {}", rule, e.toString());
         }
     }
 
     protected void testParser(String rule, String statement, String expectedResult) {
         try {
             Object actual = execParser(rule, statement);
-            log.debug("testing rule " + rule + " parsed to: " + actual);
+            log.debug("testing rule {} parsed to: {}", rule, actual);
+            if (expectedResult != null) {
+                assertEquals(expectedResult.trim(), String.valueOf(actual).trim());
+            }
         } catch (Exception e) {
             fail("testing rule " + rule + " failed: " + e);
         }
     }
 
-    // Invoke target lexer.rule
     public String execLexer(String testRuleName, String testInput) throws Exception {
-        String result = null;
-        CharStream input;
-        /** Set up ANTLR input stream based on input source, file or String */
-        input = new ANTLRStringStream(testInput);
+        CharStream input = CharStreams.fromString(testInput);
+        Lexer lexer = createLexer(input);
+        lexer.removeErrorListeners();
+        CollectingErrorListener errors = new CollectingErrorListener();
+        lexer.addErrorListener(errors);
 
-        /** Use Reflection to create instances of lexer and parser */
-        Class<?>[] lexArgTypes = new Class[] { CharStream.class }; // assign
-                                                                   // type to
-                                                                   // lexer's
-                                                                   // args
-        Constructor<?> lexConstructor = lexer.getConstructor(lexArgTypes);
-        Object[] lexArgs = new Object[] { input }; // assign value to lexer's
-                                                   // args
-        Object lexObj = lexConstructor.newInstance(lexArgs); // makes new
-                                                             // instance of
-                                                             // lexer
-        Method ruleName = null;
-
-        try {
-            ruleName = lexer.getMethod("m" + testRuleName, new Class[0]);
-        } catch (NoSuchMethodException e) {
-            // try superclass lexers
-            Class<?> lexerSuper = Class.forName(lexer.getName() + "_" + baseLexerName);
-            ruleName = lexerSuper.getMethod("m" + testRuleName, new Class[0]);
-            lexArgTypes = new Class[] { CharStream.class, CmisQlStrictLexer.class };
-            lexArgs = new Object[] { input, lexObj };
-            lexConstructor = lexerSuper.getConstructor(lexArgTypes);
-            lexObj = lexConstructor.newInstance(lexArgs);
-        }
-        /** Invoke lexer rule, and get the current index in CharStream */
-        ruleName.invoke(lexObj, new Object[0]);
-        Method ruleName2 = lexer.getMethod("getCharIndex", new Class[0]);
-        int currentIndex = (Integer) ruleName2.invoke(lexObj, new Object[0]);
-        if (currentIndex != input.size()) {
-            throw new RuntimeException("extra text found, '" + input.substring(currentIndex, input.size() - 1) + "'");
-            // System.out.println("extra text found, '"+input.substring(currentIndex,
-            // input.size()-1)+"'");
+        int expectedType = lexer.getTokenType(testRuleName);
+        if (expectedType == Token.INVALID_TYPE) {
+            throw new RuntimeException("Unknown lexer rule: " + testRuleName);
         }
 
-        return result;
+        Token token = lexer.nextToken();
+        while (token.getType() != Token.EOF && token.getChannel() != Token.DEFAULT_CHANNEL) {
+            token = lexer.nextToken();
+        }
+        if (token.getType() == Token.EOF) {
+            throw new RuntimeException("No token produced for rule " + testRuleName);
+        }
+        if (token.getType() != expectedType) {
+            throw new RuntimeException("Expected token type " + testRuleName + " but got type " + token.getType()
+                    + " text='" + token.getText() + "'");
+        }
+        // consume remaining hidden then require EOF (no extra default-channel text)
+        Token next = lexer.nextToken();
+        while (next.getType() != Token.EOF && next.getChannel() != Token.DEFAULT_CHANNEL) {
+            next = lexer.nextToken();
+        }
+        if (next.getType() != Token.EOF) {
+            throw new RuntimeException("extra text found, '" + next.getText() + "'");
+        }
+        if (errors.hasErrors()) {
+            throw new RuntimeException(errors.getErrorMessages());
+        }
+        return token.getText();
     }
 
-    // Invoke target parser.rule
     public Object execParser(String testRuleName, String testInput) throws Exception {
-        String result = null;
-        CharStream input;
-        /** Set up ANTLR input stream based on input source, file or String */
-        input = new ANTLRStringStream(testInput);
+        CharStream input = CharStreams.fromString(testInput);
+        Lexer lexer = createLexer(input);
+        lexer.removeErrorListeners();
+        CollectingErrorListener lexerErrors = new CollectingErrorListener();
+        lexer.addErrorListener(lexerErrors);
 
-        /** Use Reflection to create instances of lexer and parser */
-        // assign type to lexer's args
-        Class<?>[] lexArgTypes = new Class[] { CharStream.class };
-        Constructor<?> lexConstructor = lexer.getConstructor(lexArgTypes);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        Parser parser = createParser(tokens);
+        parser.removeErrorListeners();
+        CollectingErrorListener parserErrors = new CollectingErrorListener();
+        parser.addErrorListener(parserErrors);
 
-        // assign value to lexer's args
-        Object[] lexArgs = new Object[] { input };
-
-        // makes new instance of lexer
-        Object lexObj = lexConstructor.newInstance(lexArgs);
-
-        CommonTokenStream tokens = new CommonTokenStream((Lexer) lexObj);
-        
-        // assign type to parser's args
-        Class<?>[] parArgTypes = new Class[] { TokenStream.class };
-        Constructor<?> parConstructor = parser.getConstructor(parArgTypes);
-
-        // assign value to parser's args
-        Object[] parArgs = new Object[] { tokens };
-
-        // makes new instance of parser
-        Object parObj = parConstructor.newInstance(parArgs);
-
-        Method ruleName = parser.getMethod(testRuleName);
-
-        /** Invoke grammar rule, and store if there is a return value */
-        Object ruleReturn = ruleName.invoke(parObj);
-
-        /** If rule has return value, determine if it contains an AST or a ST */
-        if (ruleReturn != null) {
-            if (ruleReturn.getClass().toString().indexOf(testRuleName + "_return") > 0) {
-                try { // NullPointerException may happen here...
-                    String classPath = parser.getName();
-                    if (null != superGrammarName) {
-                        classPath += "_" + superGrammarName;
-                    }
-                    Class<?> _return = Class.forName(classPath + "$" + testRuleName + "_return");
-                    Method[] methods = _return.getDeclaredMethods();
-                    for (Method method : methods) {
-                        if (method.getName().equals("getTree")) {
-                            Method returnName = _return.getMethod("getTree");
-                            CommonTree tree = (CommonTree) returnName.invoke(ruleReturn);
-                            result = tree.toStringTree();
-                        } else if (method.getName().equals("getTemplate")) {
-                            Method returnName = _return.getMethod("getTemplate");
-                            StringTemplate st = (StringTemplate) returnName.invoke(ruleReturn);
-                            result = st.toString();
-                        }
-                    }
-                } catch (Exception e) {
-                    // Note: If any exception occurs, the test is viewed as
-                    // failed.
-                    throw (e);
-                }
-            }
+        Method rule = parser.getClass().getMethod(testRuleName);
+        Object ruleReturn = rule.invoke(parser);
+        if (!(ruleReturn instanceof ParserRuleContext)) {
+            throw new RuntimeException("Rule did not return a ParseTree: " + testRuleName);
         }
+        ParseTree parseTree = (ParseTree) ruleReturn;
 
-        /** Invalid input */
-        // Since AntLR 3.3 we have to skip EOF tokens at the end 
-        // This requires modification of the default code 
-        // if (tokens.index() != tokens.size()) {
-        // to
-        if (tokens.get(tokens.index()).getType() != Token.EOF) {
+        if (tokens.LA(1) != Token.EOF) {
             throw new RuntimeException("Invalid input.");
         }
-
-        /** Check for syntax errors */
-        if (((BaseRecognizer) parObj).getNumberOfSyntaxErrors() > 0) {
-            throw new RuntimeException("Syntax error occured");
+        if (lexerErrors.hasErrors()) {
+            throw new RuntimeException(lexerErrors.getErrorMessages());
         }
-        return result;
+        if (parserErrors.hasErrors()) {
+            throw new RuntimeException(parserErrors.getErrorMessages());
+        }
+
+        CmisTree tree;
+        switch (kind) {
+        case TEXT_SEARCH:
+            tree = new TextSearchAstBuilder().build(parseTree);
+            break;
+        case EXT:
+            tree = new CmisQlExtAstBuilder().build(parseTree);
+            break;
+        case STRICT:
+        default:
+            tree = new CmisQlAstBuilder().build(parseTree);
+            break;
+        }
+        return tree.toStringTree();
     }
 
+    private Lexer createLexer(CharStream input) throws Exception {
+        switch (kind) {
+        case TEXT_SEARCH:
+            return new TextSearchLexer(input);
+        case EXT:
+            return new CmisQlExtLexer(input);
+        case STRICT:
+        default:
+            return new CmisQlStrictLexer(input);
+        }
+    }
+
+    private Parser createParser(CommonTokenStream tokens) throws Exception {
+        switch (kind) {
+        case TEXT_SEARCH:
+            return new TextSearchParser(tokens);
+        case EXT:
+            return new CmisQlExtParser(tokens);
+        case STRICT:
+        default:
+            return new CmisQlStrictParser(tokens);
+        }
+    }
 }

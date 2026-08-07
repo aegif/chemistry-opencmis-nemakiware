@@ -20,6 +20,7 @@ package org.apache.chemistry.opencmis.client.bindings.spi.atompub;
 
 import org.apache.chemistry.opencmis.client.bindings.spi.BindingSession;
 import org.apache.chemistry.opencmis.client.bindings.spi.CmisSpi;
+import org.apache.chemistry.opencmis.client.bindings.spi.http.HttpInvokerSessionResources;
 import org.apache.chemistry.opencmis.commons.spi.AclService;
 import org.apache.chemistry.opencmis.commons.spi.DiscoveryService;
 import org.apache.chemistry.opencmis.commons.spi.MultiFilingService;
@@ -132,6 +133,6 @@ public class CmisAtomPubSpi implements CmisSpi {
 
     @Override
     public void close() {
-        // no-op for AtomPub
+        HttpInvokerSessionResources.close(session);
     }
 }

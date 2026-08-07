@@ -1,127 +1,66 @@
 OpenCMIS Android Client
 =======================
 
-The OpenCMIS Android Client provides a collection of methods to access and manage CMIS Repository.
+The OpenCMIS Android Client provides a collection of methods to access and
+manage a CMIS repository from mobile / constrained environments.
 
 
 OpenCMIS Client Bindings supported
 ----------------------------------
-OpenCMIS Android Client supports the AtomPub Binding and the Browser Binding.
-The Web Service Binding (SOAP protocol) is not supported by this library.
+AtomPub Binding and Browser Binding are supported.
+The Web Service Binding (SOAP) is not supported.
 
 
-Android Version Supported
--------------------------
-Previous versions of Android don't contain all dependencies required to run and use OpenCMIS Android client.  
-It's only since Android 2.3 (aka Gingerbread) everything works. 
-In other terms, Android client supports Android 2.3 and above.
-
--------------------------
- !!! IMPORTANT NOTE !!!
--------------------------
-OpenCMIS Android Client is a SYNCHRONOUS library ! 
-It's highly recommended that you encapsulate all CMIS operations in background thread. 
-In Android it's possible to use
-+	Services
-+	Loaders
-+	AsyncTask
-+	Thread/Handler
-
-For more information on Thread and background task : <http://developer.android.com/guide/components/processes-and-threads.html>
-
-
-Importing the Android OpenCMIS Client into your Android Project
----------------------------------------------------------------
-
-The Android OpenCMIS Client requires SLF4J for android.
-Download it from here: <http://www.slf4j.org/android/>
-
-Put the Android OpenCMIS Client Jar and SLF4J jar into your Android project libs folder. 
-Now you're ready to use OpenCMIS inside your project.
-
-For more information on Project libs folder : <http://tools.android.com/recent/dealingwithdependenciesinandroidprojects>
-
-Importing the Android OpenCMIS Client with Maven 
-------------------------------------------------
-If you use Maven to build your Android Project, it's possible to add this library as Maven dependency.
-
-Add to your pom project : 
-
-<dependencies>
-	...
-	<dependency>
-		<groupId>com.google.android</groupId>
-		<artifactId>annotations</artifactId>
-	</dependency>
-	<dependency>
-		<groupId>org.apache.chemistry.opencmis</groupId>
-		<artifactId>chemistry-opencmis-android-client</artifactId>
-		<version>x.z.y</version>
-		<exclusions>
-			<exclusion>
-				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-api</artifactId>
-			</exclusion>
-		</exclusions>
-	</dependency>
-	<dependency>
-		<groupId>org.slf4j</groupId>
-		<artifactId>slf4j-android</artifactId>
-		<version>1.7.5</version>
-	</dependency>
-	...
-</dependencies>
+Runtime / build notes
+---------------------
+ - XML uses the shared desktop StAX stack (`XMLConverter` / `XMLUtils` /
+   AtomPub SPI) via Woodstox (`com.fasterxml.woodstox:woodstox-core`)
+   plus explicit `javax.xml.stream:stax-api` and
+   `org.codehaus.woodstox:stax2-api` (Woodstox 7 excludes stax-api
+   because the JDK normally provides it; Android does not).
+ - The artifact is compiled with `--release 11` (parent reactor stays on
+   Java 21). `--release 11` does not prove Android API / DEX
+   compatibility by itself; CI also runs a D8 conversion smoke
+   (`scripts/android-d8-smoke.sh`, min-api 26). Device/emulator
+   instrumentation is still out of scope in this repository.
+ - The `pack` ZIP/TAR includes the client JAR plus a `lib/` directory
+   with Woodstox, stax-api, and stax2-api. Maven consumers also get
+   those as transitive dependencies.
+ - Binary pack LICENSE/NOTICE documents third-party licenses. In
+   particular, `lib/stax-api-*.jar` (Streaming API for XML / JSR-173,
+   `javax.xml.stream:stax-api`) is under the CDDL 1.0 + GPL v2 dual
+   license (https://glassfish.dev.java.net/public/CDDL+GPL.html).
+   That jar is Category B under the ASF Third-Party License Policy and
+   is shipped only in the binary pack (not in the source distribution).
+ - Prefer OkHttp for Android sessions
+   (`...spi.http.OkHttpHttpInvoker`). The JVM default is Apache
+   HttpClient 5; both are available as session parameters.
+ - CI runs D8 (min-api 26) and an API 26 emulator smoke that pushes
+   the produced DEX onto a running emulator.
 
 
-Code sample
------------
-This code sample illustrates how to display in a simple TextView a list of folder children.
-  
-public class FirstOpenCMISActivity extends Activity {
+IMPORTANT: synchronous API
+--------------------------
+OpenCMIS Android Client is a SYNCHRONOUS library.
+Encapsulate CMIS calls in a background thread (Service, Loader,
+Executor, Coroutine, etc.).
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        new FirstOpenCMISAsyncTask().execute();
-    }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.activity_main, menu);
-        return true;
-    }
-    
-    
-    private class FirstOpenCMISAsyncTask extends AsyncTask<Void, Void, String>
-    {
-    	@Override
-    	protected String doInBackground(Void... arg0) {
-    		
-    		SessionFactory sessionFactory = SessionFactoryImpl.newInstance();
-    		Map<String, String> parameter = new HashMap<String, String>();
-    		parameter.put(SessionParameter.USER, "admin");
-    		parameter.put(SessionParameter.PASSWORD, "admin");
-    		parameter.put(SessionParameter.ATOMPUB_URL, "http://192.168.1.100:8080/inmemory/atom/");
-    		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-    		Repository repository = sessionFactory.getRepositories(parameter).get(0);
-    		parameter.put(SessionParameter.REPOSITORY_ID, repository.getId());
-    		Session session = sessionFactory.createSession(parameter);
-    		
-    		String listChildren = "";
-    		Folder mediaFolder = (Folder) session.getObjectByPath("/media");
-    		ItemIterable<CmisObject> children = mediaFolder.getChildren();
-    	    for (CmisObject o : children) {
-    	    	listChildren += o.getName() + " - " + o.getType().getDisplayName() + " - " + o.getCreatedBy() + "\b\n";
-    	    }
-    		
-    		return listChildren;
-    	}
+Maven dependency
+----------------
 
-    	@Override
-    	protected void onPostExecute(String result) {
-    		TextView tv = (TextView) (FirstOpenCMISActivity.this).findViewById(R.id.opencmis_text);
-    		tv.setText(result);
-    	}
-    }
-}
+    <dependency>
+        <groupId>org.apache.chemistry.opencmis</groupId>
+        <artifactId>chemistry-opencmis-android-client</artifactId>
+        <version>${opencmis.version}</version>
+    </dependency>
+
+Transitive runtime jars should include Woodstox, stax-api, and stax2-api.
+If you shade/minimize, keep `javax.xml.stream` and Woodstox factories.
+
+
+Build
+-----
+
+    mvn -pl chemistry-opencmis-android/chemistry-opencmis-android-client -am package
+    ./scripts/android-d8-smoke.sh

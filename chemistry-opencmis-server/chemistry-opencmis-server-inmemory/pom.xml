@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>2.0.0-RC2-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -49,7 +49,7 @@
                             <Bundle-Name>org.apache.chemistry.opencmis.server.inmemory</Bundle-Name>
                             <Bundle-SymbolicName>org.apache.chemistry.opencmis.server.inmemory</Bundle-SymbolicName>
                             <Bundle-Version>0.0.1</Bundle-Version>
-                            <Import-Package>javax.servlet,javax.servlet.http,javax.servlet.resources</Import-Package>
+                            <Import-Package>jakarta.servlet,jakarta.servlet.http,jakarta.servlet.resources</Import-Package>
                             <Bundle-Classpath>.</Bundle-Classpath>
                             <Web-ContextPath>inmemory</Web-ContextPath>
                         </manifestEntries>
@@ -121,9 +121,9 @@
         </dependency>
         -->
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>3.1.0</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>${jakarta.servlet.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -133,7 +133,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <version>${log4j.version}</version>
         </dependency>
     </dependencies>

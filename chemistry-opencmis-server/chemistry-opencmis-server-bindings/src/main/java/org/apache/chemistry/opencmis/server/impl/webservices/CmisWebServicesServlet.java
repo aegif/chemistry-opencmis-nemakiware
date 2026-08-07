@@ -26,13 +26,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.xml.ws.Endpoint;
-import javax.xml.ws.soap.SOAPBinding;
-import javax.xml.ws.spi.Provider;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.xml.ws.Endpoint;
+import jakarta.xml.ws.soap.SOAPBinding;
+import jakarta.xml.ws.spi.Provider;
 
 import org.apache.chemistry.opencmis.commons.enums.CmisVersion;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
@@ -44,9 +44,11 @@ import org.apache.chemistry.opencmis.server.shared.AbstractCmisHttpServlet;
 import org.apache.chemistry.opencmis.server.shared.CallContextHandler;
 import org.apache.chemistry.opencmis.server.shared.CsrfManager;
 import org.apache.chemistry.opencmis.server.shared.Dispatcher;
-import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
+import org.apache.cxf.endpoint.Server;
+import org.apache.cxf.jaxws.JaxWsServerFactoryBean;
 import org.apache.cxf.transport.servlet.CXFNonSpringServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -223,7 +225,7 @@ public class CmisWebServicesServlet extends CXFNonSpringServlet {
         pw.print("<h1>CMIS " + cmisVersion.value() + " Web Services</h1>");
         pw.print("<p>CMIS WSDL for all services: <a href=\"" + urlEscaped + "\">" + urlEscaped + "</a></p>");
 
-        pw.print("</body></html>");
+        pw.print("</html></body>");
         pw.flush();
     }
 
@@ -298,26 +300,38 @@ public class CmisWebServicesServlet extends CXFNonSpringServlet {
 
         configureInterceptors(bus);
 
-        if (cmisVersion == CmisVersion.CMIS_1_0) {
-            publish("/RepositoryService", new RepositoryService10());
-            publish("/NavigationService", new NavigationService());
-            publish("/ObjectService", new ObjectService10());
-            publish("/VersioningService", new VersioningService());
-            publish("/RelationshipService", new RelationshipService());
-            publish("/DiscoveryService", new DiscoveryService());
-            publish("/MultiFilingService", new MultiFilingService());
-            publish("/ACLService", new AclService());
-            publish("/PolicyService", new PolicyService());
-        } else {
-            publish("/RepositoryService", new RepositoryService());
-            publish("/NavigationService", new NavigationService());
-            publish("/ObjectService", new ObjectService());
-            publish("/VersioningService", new VersioningService());
-            publish("/RelationshipService", new RelationshipService());
-            publish("/DiscoveryService", new DiscoveryService());
-            publish("/MultiFilingService", new MultiFilingService());
-            publish("/ACLService", new AclService());
-            publish("/PolicyService", new PolicyService());
+        // CRITICAL FIX: Use CXF native servlet approach instead of Endpoint.publish()
+        // CXF servlet transport handles HTTP routing automatically without manual endpoint publishing
+        try {
+            LOG.info("Initializing CMIS Web Services using CXF native servlet transport...");
+            
+            if (cmisVersion == CmisVersion.CMIS_1_0) {
+                registerServiceWithCxf("/RepositoryService", new RepositoryService10(), bus);
+                registerServiceWithCxf("/NavigationService", new NavigationService(), bus);
+                registerServiceWithCxf("/ObjectService", new ObjectService10(), bus);
+                registerServiceWithCxf("/VersioningService", new VersioningService(), bus);
+                registerServiceWithCxf("/RelationshipService", new RelationshipService(), bus);
+                registerServiceWithCxf("/DiscoveryService", new DiscoveryService(), bus);
+                registerServiceWithCxf("/MultiFilingService", new MultiFilingService(), bus);
+                registerServiceWithCxf("/ACLService", new AclService(), bus);
+                registerServiceWithCxf("/PolicyService", new PolicyService(), bus);
+            } else {
+                registerServiceWithCxf("/RepositoryService", new RepositoryService(), bus);
+                registerServiceWithCxf("/NavigationService", new NavigationService(), bus);
+                registerServiceWithCxf("/ObjectService", new ObjectService(), bus);
+                registerServiceWithCxf("/VersioningService", new VersioningService(), bus);
+                registerServiceWithCxf("/RelationshipService", new RelationshipService(), bus);
+                registerServiceWithCxf("/DiscoveryService", new DiscoveryService(), bus);
+                registerServiceWithCxf("/MultiFilingService", new MultiFilingService(), bus);
+                registerServiceWithCxf("/ACLService", new AclService(), bus);
+                registerServiceWithCxf("/PolicyService", new PolicyService(), bus);
+            }
+            
+            LOG.info("✅ All CMIS Web Services registered successfully with CXF native transport");
+            
+        } catch (Exception e) {
+            LOG.error("❌ Failed to initialize CMIS Web Services", e);
+            throw new CmisRuntimeException("Cannot initialize CMIS Web Services", e);
         }
     }
 
@@ -332,17 +346,38 @@ public class CmisWebServicesServlet extends CXFNonSpringServlet {
         bus.getInInterceptors().add(new UsernameTokenInterceptor());
     }
 
-    private Endpoint publish(String address, Object implementor) {
-        Provider provider = Provider.provider();
-        if (provider.getClass().getName().startsWith("weblogic.")) {
-            // workaround for WebLogic
-            address = address + "/";
+    /**
+     * Registers a CMIS service with CXF using native servlet transport.
+     * This bypasses Endpoint.publish() which causes issues in servlet containers.
+     */
+    private void registerServiceWithCxf(String address, Object implementor, Bus bus) {
+        try {
+            LOG.info("Registering CMIS service at address: {}", address);
+            
+            // Create JAX-WS server using CXF's servlet transport
+            JaxWsServerFactoryBean factory = new JaxWsServerFactoryBean();
+            factory.setBus(bus);
+            factory.setAddress(address);
+            factory.setServiceBean(implementor);
+            
+            // Enable MTOM for large file transfers
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("mtom-enabled", Boolean.TRUE);
+            factory.setProperties(properties);
+            
+            // Configure SOAP binding
+            factory.setBindingId(SOAPBinding.SOAP11HTTP_MTOM_BINDING);
+            
+            // Create the server - this registers with CXF servlet transport
+            // No explicit endpoint publishing required - CXF servlet handles HTTP routing
+            Server server = factory.create();
+            
+            LOG.info("✅ Successfully registered service: {} with CXF servlet transport", address);
+            
+        } catch (Exception e) {
+            LOG.error("❌ Failed to register service: {}", address, e);
+            throw new CmisRuntimeException("Cannot register Web Service: " + address, e);
         }
-
-        Endpoint endpoint = Endpoint.publish(address, implementor);
-        SOAPBinding binding = (SOAPBinding) endpoint.getBinding();
-        binding.setMTOMEnabled(true);
-
-        return endpoint;
     }
+
 }

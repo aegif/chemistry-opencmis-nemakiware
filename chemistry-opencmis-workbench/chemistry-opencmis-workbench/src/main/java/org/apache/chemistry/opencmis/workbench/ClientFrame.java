@@ -126,7 +126,7 @@ public class ClientFrame extends JFrame implements WindowListener {
         ImageIcon icon = ClientHelper.getCmisIconImage();
         boolean isDockImageSet = false;
 
-        // Java >= 9 goodies
+        // Java >= 9 Taskbar API (works on Java 21+)
         try {
             Class<?> taskbarClass = Class.forName("java.awt.Taskbar");
             Object taskbar = taskbarClass.getMethod("getTaskbar").invoke(null);
@@ -140,7 +140,7 @@ public class ClientFrame extends JFrame implements WindowListener {
                 }
             }
         } catch (Exception e) {
-            // Java < 9
+            // Java < 9 or unsupported platform
         }
 
         // Mac OS X goodies
@@ -149,7 +149,6 @@ public class ClientFrame extends JFrame implements WindowListener {
                 if (!isDockImageSet && icon != null) {
                     Class<?> macAppClass = Class.forName("com.apple.eawt.Application");
                     Object macApp = macAppClass.getMethod("getApplication").invoke(null);
-
                     try {
                         macAppClass.getMethod("setDockIconImage", Image.class).invoke(macApp, icon.getImage());
                     } catch (Exception e) {
@@ -159,8 +158,8 @@ public class ClientFrame extends JFrame implements WindowListener {
 
                 try {
                     Class<?> fullscreenClass = Class.forName("com.apple.eawt.FullScreenUtilities");
-                    fullscreenClass.getMethod("setWindowCanFullScreen", Window.class, Boolean.TYPE)
-                            .invoke(fullscreenClass, this, true);
+                    fullscreenClass.getMethod("setWindowCanFullScreen", Window.class, Boolean.TYPE).invoke(null, this,
+                            true);
                 } catch (Exception e) {
                     LOG.debug("Could not add fullscreen button!", e);
                 }
@@ -400,14 +399,10 @@ public class ClientFrame extends JFrame implements WindowListener {
 
         addWindowListener(this);
 
-        setMinimumSize(new Dimension(300, 100));
-
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int frameWidth = Math.max(prefs.getInt(PREFS_WIDTH, (int) (screenSize.getWidth() / 1.5)),
-                (int) getMinimumSize().getWidth());
-        int frameHeight = Math.max(prefs.getInt(PREFS_HEIGHT, (int) (screenSize.getHeight() / 1.5)),
-                (int) getMinimumSize().getHeight());
-        setPreferredSize(new Dimension(frameWidth, frameHeight));
+        setPreferredSize(new Dimension(prefs.getInt(PREFS_WIDTH, (int) (screenSize.getWidth() / 1.5)),
+                prefs.getInt(PREFS_HEIGHT, (int) (screenSize.getHeight() / 1.5))));
+        setMinimumSize(new Dimension(200, 60));
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();

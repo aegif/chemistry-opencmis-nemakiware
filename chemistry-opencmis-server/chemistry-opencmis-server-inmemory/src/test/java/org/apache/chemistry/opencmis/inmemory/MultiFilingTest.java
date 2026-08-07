@@ -18,11 +18,11 @@
  */
 package org.apache.chemistry.opencmis.inmemory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,9 +41,9 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisNotSupportedExceptio
 import org.apache.chemistry.opencmis.commons.server.CallContext;
 import org.apache.chemistry.opencmis.commons.spi.Holder;
 import org.apache.chemistry.opencmis.inmemory.types.DocumentTypeCreationHelper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,13 +60,13 @@ public class MultiFilingTest extends AbstractServiceTest {
     private String fId11;
 
     @Override
-    @Before
+    @BeforeEach
     public void setUp() {
         super.setUp();
     }
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }
@@ -147,8 +147,8 @@ public class MultiFilingTest extends AbstractServiceTest {
                 foundOldParent = true;
             }
         }
-        assertTrue("After move new target should be a parent", foundNewParent);
-        assertFalse("After move old source should no longer be a parent", foundOldParent);
+        assertTrue(foundNewParent, "After move new target should be a parent");
+        assertFalse(foundOldParent, "After move old source should no longer be a parent");
         LOG.debug("End testMoveMultiFiledDocument()");
     }
 

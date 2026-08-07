@@ -18,19 +18,19 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestParserStrict extends AbstractParserTest {
 
-    @Before
+    @BeforeEach
     public void setUp() {
         super.setUp(CmisQlStrictLexer.class, CmisQlStrictParser.class, "CmisBaseGrammar", "CmisBaseLexer");
     }
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }
@@ -403,7 +403,7 @@ public class TestParserStrict extends AbstractParserTest {
     // "ORDER BY foo ASC" -> (ORDER_BY (COL foo) ASC)
     @Test
     public void testOrderBy2() throws Exception {
-        testParser("order_by_clause", "ORDER BY foo ASC", "ORDER_BY (COL foo) ASC)");
+        testParser("order_by_clause", "ORDER BY foo ASC", "(ORDER_BY (COL foo) ASC)");
     }
 
     // "ORDER BY foo DESC" -> (ORDER_BY (COL foo) DESC)
@@ -579,19 +579,19 @@ public class TestParserStrict extends AbstractParserTest {
     // "IN_TREE(foo,'ID123')" -> (IN_TREE foo 'ID123')
     @Test
     public void folder_predicate3() throws Exception {
-        testParser("folder_predicate", "IN_TREE(foo,'ID123')", "(IN_FOLDER 'ID123')");
+        testParser("folder_predicate", "IN_TREE(foo,'ID123')", "(IN_TREE foo 'ID123')");
     }
 
     // "IN_TREE('ID123')" -> (IN_TREE 'ID123')
     @Test
     public void folder_predicate4() throws Exception {
-        testParser("folder_predicate", "IN_TREE('ID123')", " (IN_TREE 'ID123')");
+        testParser("folder_predicate", "IN_TREE('ID123')", "(IN_TREE 'ID123')");
     }
 
     @Test
     public void folder_predicate() throws Exception {
         testParser("search_condition", "id456 LIKE 'Foo%' AND IN_FOLDER('abc')",
-                "(AND (LIKE 'id456' 'Foo%') (IN_FOLDER 'abc')");
+                "(AND (LIKE (COL id456) 'Foo%') (IN_FOLDER 'abc'))");
     }
 
     // text_search_predicate:

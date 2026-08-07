@@ -143,8 +143,7 @@ public class DelayingHttpInvoker implements HttpInvoker {
                 if (invokerName == null) {
                     invoker = new DefaultHttpInvoker();
                 } else {
-                    invoker = (HttpInvoker) ClassLoaderUtil.loadClass(invokerName).getDeclaredConstructor()
-                            .newInstance();
+                    invoker = (HttpInvoker) ClassLoaderUtil.loadClass(invokerName).newInstance();
                 }
             } catch (CmisBaseException e) {
                 throw e;

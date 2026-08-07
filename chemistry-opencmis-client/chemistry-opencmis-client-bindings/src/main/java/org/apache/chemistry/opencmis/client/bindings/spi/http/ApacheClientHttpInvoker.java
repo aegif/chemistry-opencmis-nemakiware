@@ -18,161 +18,104 @@
  */
 package org.apache.chemistry.opencmis.client.bindings.spi.http;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.ProxySelector;
 
 import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.chemistry.opencmis.client.bindings.impl.CmisBindingsHelper;
 import org.apache.chemistry.opencmis.client.bindings.spi.BindingSession;
+import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
 import org.apache.chemistry.opencmis.commons.spi.AuthenticationProvider;
-import org.apache.http.client.params.ClientPNames;
-import org.apache.http.client.params.CookiePolicy;
-import org.apache.http.conn.ConnectTimeoutException;
-import org.apache.http.conn.HttpInetSocketAddress;
-import org.apache.http.conn.scheme.PlainSocketFactory;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.scheme.SchemeLayeredSocketFactory;
-import org.apache.http.conn.scheme.SchemeRegistry;
-import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
-import org.apache.http.conn.ssl.X509HostnameVerifier;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
-import org.apache.http.impl.conn.ProxySelectorRoutePlanner;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.impl.routing.SystemDefaultRoutePlanner;
+import org.apache.hc.client5.http.ssl.DefaultHostnameVerifier;
+import org.apache.hc.client5.http.ssl.HttpsSupport;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
+import org.apache.hc.core5.util.TimeValue;
+import org.apache.hc.core5.util.Timeout;
 
 /**
  * A {@link HttpInvoker} that uses The Apache HTTP client.
  */
 public class ApacheClientHttpInvoker extends AbstractApacheClientHttpInvoker {
 
+    /** Default max connections per route — sized for concurrent CMIS / TCK load. */
+    public static final int DEFAULT_MAX_CONN_PER_ROUTE = 100;
+
+    /** Default max connections in the pool. */
+    public static final int DEFAULT_MAX_CONN_TOTAL = 200;
+
     @Override
-    protected DefaultHttpClient createHttpClient(UrlBuilder url, BindingSession session) {
-        // set params
-        HttpParams params = createDefaultHttpParams(session);
-        params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
+    protected CloseableHttpClient createHttpClient(UrlBuilder url, BindingSession session) {
+        PoolingHttpClientConnectionManagerBuilder connManagerBuilder = PoolingHttpClientConnectionManagerBuilder
+                .create().setSSLSocketFactory(getSSLSocketFactory(url, session));
 
-        // set up scheme registry and connection manager
-        SchemeRegistry registry = new SchemeRegistry();
-        registry.register(new Scheme("http", 80, PlainSocketFactory.getSocketFactory()));
-        registry.register(new Scheme("https", 443, getSSLSocketFactory(url, session)));
+        ConnectionConfig.Builder connectionConfig = ConnectionConfig.custom()
+                .setValidateAfterInactivity(TimeValue.ofMilliseconds(2000))
+                .setTimeToLive(TimeValue.ofMinutes(5));
 
-        // set up connection manager
-        PoolingClientConnectionManager connManager = new PoolingClientConnectionManager(registry);
-
-        // set max connection a
-        String keepAliveStr = System.getProperty("http.keepAlive", "true");
-        if ("true".equalsIgnoreCase(keepAliveStr)) {
-            String maxConnStr = System.getProperty("http.maxConnections", "5");
-            int maxConn = 5;
-            try {
-                maxConn = Integer.parseInt(maxConnStr);
-            } catch (NumberFormatException nfe) {
-                // ignore
-            }
-            connManager.setDefaultMaxPerRoute(maxConn);
-            connManager.setMaxTotal(4 * maxConn);
+        int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
+        if (connectTimeout >= 0) {
+            connectionConfig.setConnectTimeout(Timeout.ofMilliseconds(connectTimeout));
         }
 
-        // set up proxy
-        ProxySelectorRoutePlanner routePlanner = new ProxySelectorRoutePlanner(registry, null);
+        int readTimeout = session.get(SessionParameter.READ_TIMEOUT, -1);
+        if (readTimeout >= 0) {
+            connectionConfig.setSocketTimeout(Timeout.ofMilliseconds(readTimeout));
+        }
 
-        // set up client
-        DefaultHttpClient httpclient = new DefaultHttpClient(connManager, params);
-        httpclient.setRoutePlanner(routePlanner);
+        connManagerBuilder.setDefaultConnectionConfig(connectionConfig.build());
 
-        return httpclient;
+        int maxPerRoute = session.get(SessionParameter.HTTP_MAX_CONNECTIONS_PER_HOST, DEFAULT_MAX_CONN_PER_ROUTE);
+        int maxTotal = session.get(SessionParameter.HTTP_MAX_CONNECTIONS, DEFAULT_MAX_CONN_TOTAL);
+        if (maxPerRoute < 1) {
+            maxPerRoute = DEFAULT_MAX_CONN_PER_ROUTE;
+        }
+        if (maxTotal < 1) {
+            maxTotal = DEFAULT_MAX_CONN_TOTAL;
+        }
+        if (maxTotal < maxPerRoute) {
+            maxTotal = maxPerRoute;
+        }
+        connManagerBuilder.setMaxConnPerRoute(maxPerRoute);
+        connManagerBuilder.setMaxConnTotal(maxTotal);
+
+        PoolingHttpClientConnectionManager connManager = connManagerBuilder.build();
+
+        return HttpClients.custom().setConnectionManager(connManager).setUserAgent(getUserAgent(session))
+                .setDefaultRequestConfig(createRequestConfig(session))
+                .setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault()))
+                .evictExpiredConnections()
+                .evictIdleConnections(TimeValue.ofSeconds(30))
+                .build();
     }
 
     /**
      * Builds a SSL Socket Factory for the Apache HTTP Client.
      */
-    private SchemeLayeredSocketFactory getSSLSocketFactory(final UrlBuilder url, final BindingSession session) {
+    private SSLConnectionSocketFactory getSSLSocketFactory(final UrlBuilder url, final BindingSession session) {
         // get authentication provider
         AuthenticationProvider authProvider = CmisBindingsHelper.getAuthenticationProvider(session);
 
         // check SSL Socket Factory
-        final SSLSocketFactory sf = authProvider.getSSLSocketFactory();
+        final SSLSocketFactory sf = authProvider == null ? null : authProvider.getSSLSocketFactory();
         if (sf == null) {
             // no custom factory -> return default factory
-            return org.apache.http.conn.ssl.SSLSocketFactory.getSocketFactory();
+            return SSLConnectionSocketFactoryBuilder.create().setHostnameVerifier(HttpsSupport.getDefaultHostnameVerifier())
+                    .build();
         }
 
-        // check hostame verifier and use default if not set
-        final HostnameVerifier hv = (authProvider.getHostnameVerifier() == null ? new BrowserCompatHostnameVerifier()
+        // check hostname verifier and use default if not set
+        final HostnameVerifier hv = (authProvider.getHostnameVerifier() == null ? new DefaultHostnameVerifier()
                 : authProvider.getHostnameVerifier());
 
-        if (hv instanceof X509HostnameVerifier) {
-            return new org.apache.http.conn.ssl.SSLSocketFactory(sf, (X509HostnameVerifier) hv);
-        }
-
-        // build new socket factory
-        return new SchemeLayeredSocketFactory() {
-
-            @Override
-            public boolean isSecure(Socket sock) {
-                return true;
-            }
-
-            @Override
-            public Socket createSocket(HttpParams params) throws IOException {
-                return sf.createSocket();
-            }
-
-            @Override
-            public Socket connectSocket(final Socket socket, final InetSocketAddress remoteAddress,
-                    final InetSocketAddress localAddress, final HttpParams params) throws IOException {
-
-                Socket sock = socket != null ? socket : createSocket(params);
-                if (localAddress != null) {
-                    sock.setReuseAddress(HttpConnectionParams.getSoReuseaddr(params));
-                    sock.bind(localAddress);
-                }
-
-                int connTimeout = HttpConnectionParams.getConnectionTimeout(params);
-                int soTimeout = HttpConnectionParams.getSoTimeout(params);
-
-                try {
-                    sock.setSoTimeout(soTimeout);
-                    sock.connect(remoteAddress, connTimeout);
-                } catch (SocketTimeoutException ex) {
-                    closeSocket(sock);
-                    throw new ConnectTimeoutException("Connect to " + remoteAddress + " timed out!");
-                }
-
-                String host;
-                if (remoteAddress instanceof HttpInetSocketAddress) {
-                    host = ((HttpInetSocketAddress) remoteAddress).getHttpHost().getHostName();
-                } else {
-                    host = remoteAddress.getHostName();
-                }
-
-                SSLSocket sslSocket;
-                if (sock instanceof SSLSocket) {
-                    sslSocket = (SSLSocket) sock;
-                } else {
-                    int port = remoteAddress.getPort();
-                    sslSocket = (SSLSocket) sf.createSocket(sock, host, port, true);
-                }
-                verify(hv, host, sslSocket);
-
-                return sslSocket;
-            }
-
-            @Override
-            public Socket createLayeredSocket(final Socket socket, final String host, final int port,
-                    final HttpParams params) throws IOException {
-                SSLSocket sslSocket = (SSLSocket) sf.createSocket(socket, host, port, true);
-                verify(hv, host, sslSocket);
-
-                return sslSocket;
-            }
-        };
+        return new SSLConnectionSocketFactory(sf, hv);
     }
 }

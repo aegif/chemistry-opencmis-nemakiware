@@ -22,15 +22,15 @@
  */
 package org.apache.chemistry.opencmis.commons.impl.misc;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests miscellaneous details.
  */
-public class MiscTest extends TestCase {
+public class MiscTest {
 
     @Test
     public void testUrlBuilder() {

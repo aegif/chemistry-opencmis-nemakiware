@@ -476,15 +476,14 @@ public class FolderImpl extends AbstractFilableCmisObject implements Folder {
     @Override
     public Document createDocument(Map<String, ?> properties, ContentStream contentStream,
             VersioningState versioningState) {
-        return this.createDocument(properties, contentStream, versioningState, null, null, null,
-                getSession().getDefaultContext());
+        return this.createDocument(properties, contentStream, versioningState, null, null, null, getSession()
+                .getDefaultContext());
     }
 
     @Override
-    public Document createDocumentFromSource(ObjectId source, Map<String, ?> properties,
-            VersioningState versioningState) {
-        return this.createDocumentFromSource(source, properties, versioningState, null, null, null,
-                getSession().getDefaultContext());
+    public Document createDocumentFromSource(ObjectId source, Map<String, ?> properties, VersioningState versioningState) {
+        return this.createDocumentFromSource(source, properties, versioningState, null, null, null, getSession()
+                .getDefaultContext());
     }
 
     @Override

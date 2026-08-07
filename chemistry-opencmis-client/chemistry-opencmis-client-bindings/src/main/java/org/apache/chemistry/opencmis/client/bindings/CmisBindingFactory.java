@@ -45,8 +45,8 @@ public class CmisBindingFactory {
 
     /** Default type definition cache class */
     public static final String DEFAULT_TYPE_DEFINITION_CACHE_CLASS = "org.apache.chemistry.opencmis.client.bindings.impl.TypeDefinitionCacheImpl";
-    /** Default HTTP invoker class */
-    public static final String DEFAULT_HTTP_INVOKER = "org.apache.chemistry.opencmis.client.bindings.spi.http.DefaultHttpInvoker";
+    /** Default HTTP invoker class (Apache HttpClient 5). */
+    public static final String DEFAULT_HTTP_INVOKER = "org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker";
     /** Standard authentication provider class. */
     public static final String STANDARD_AUTHENTICATION_PROVIDER = "org.apache.chemistry.opencmis.client.bindings.spi.StandardAuthenticationProvider";
     /** NTLM authentication provider class. */

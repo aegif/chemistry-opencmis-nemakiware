@@ -1,0 +1,79 @@
+name: FIT TCK (on demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      java-version:
+        description: Temurin JDK version
+        required: true
+        default: "21"
+        type: choice
+        options:
+          - "21"
+          - "25"
+      it-test:
+        description: Failsafe IT class name
+        required: true
+        default: AtomPub11NonVersTckIT
+        type: choice
+        options:
+          - AtomPub10NonVersTckIT
+          - AtomPub10VersTckIT
+          - AtomPub11NonVersTckIT
+          - AtomPub11VersTckIT
+          - Browser11NonVersTckIT
+          - Browser11VersTckIT
+          - WebServices10NonVersTckIT
+          - WebServices10VersTckIT
+          - WebServices11NonVersTckIT
+          - WebServices11VersTckIT
+
+jobs:
+  fit-tck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Resolve binding flags from IT name
+        id: flags
+        run: |
+          IT="${{ inputs.it-test }}"
+          ATOMPUB=false; BROWSER=false; WS=false; CMIS10=false; CMIS11=true
+          case "$IT" in
+            AtomPub*) ATOMPUB=true ;;
+            Browser*) BROWSER=true ;;
+            WebServices*) WS=true ;;
+            *) echo "Unknown IT pattern: $IT"; exit 1 ;;
+          esac
+          case "$IT" in
+            *10*) CMIS10=true; CMIS11=false ;;
+            *11*) CMIS10=false; CMIS11=true ;;
+          esac
+          echo "atompub=$ATOMPUB" >> "$GITHUB_OUTPUT"
+          echo "browser=$BROWSER" >> "$GITHUB_OUTPUT"
+          echo "webservices=$WS" >> "$GITHUB_OUTPUT"
+          echo "cmis10=$CMIS10" >> "$GITHUB_OUTPUT"
+          echo "cmis11=$CMIS11" >> "$GITHUB_OUTPUT"
+
+      - name: Install reactor (skip tests)
+        run: |
+          mvn -pl chemistry-opencmis-test/chemistry-opencmis-test-fit -am clean install -DskipTests
+
+      - name: Run selected FIT TCK IT
+        run: >
+          mvn -pl chemistry-opencmis-test/chemistry-opencmis-test-fit
+          failsafe:integration-test failsafe:verify
+          -Dit.test=${{ inputs.it-test }}
+          -Dorg.apache.chemistry.opencmis.tck.testAtomPub=${{ steps.flags.outputs.atompub }}
+          -Dorg.apache.chemistry.opencmis.tck.testBrowser=${{ steps.flags.outputs.browser }}
+          -Dorg.apache.chemistry.opencmis.tck.testWebServices=${{ steps.flags.outputs.webservices }}
+          -Dorg.apache.chemistry.opencmis.tck.testCmis10=${{ steps.flags.outputs.cmis10 }}
+          -Dorg.apache.chemistry.opencmis.tck.testCmis11=${{ steps.flags.outputs.cmis11 }}

@@ -18,14 +18,17 @@
  */
 package org.apache.chemistry.opencmis.client.runtime;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 
 import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.util.OperationContextUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class OperationContextTest {
 

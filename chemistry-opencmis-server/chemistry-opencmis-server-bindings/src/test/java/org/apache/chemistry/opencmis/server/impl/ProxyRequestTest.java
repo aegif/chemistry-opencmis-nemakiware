@@ -18,22 +18,23 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.chemistry.opencmis.commons.server.CallContext;
 import org.apache.chemistry.opencmis.commons.server.CmisService;
 import org.apache.chemistry.opencmis.server.filter.ProxyHttpServletRequestWrapper;
 import org.apache.chemistry.opencmis.server.impl.atompub.AbstractAtomPubServiceCall;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -56,15 +57,24 @@ public class ProxyRequestTest {
     @Mock
     private HttpServletRequest request;
 
-    @Before
+    private AutoCloseable mocks;
+
+    @BeforeEach
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         when(this.request.getScheme()).thenReturn(BACKEND_SERVER_PROTO);
         when(this.request.getServerName()).thenReturn(BACKEND_SERVER_NAME);
         when(this.request.getServerPort()).thenReturn(BACKEND_SERVER_PORT);
         when(this.request.getContextPath()).thenReturn(CONTEXT_PATH);
         when(this.request.getServletPath()).thenReturn(SERVLET_PATH);
         when(this.request.getRequestURI()).thenReturn(CONTEXT_PATH + "/" + SERVLET_PATH);
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
     }
 
     @Test

@@ -495,10 +495,5 @@ public final class ContentStreamUtils {
             return false;
         }
 
-        @Override
-        protected void finalize() throws Throwable {
-            closeQuietly();
-            super.finalize();
-        }
     }
 }

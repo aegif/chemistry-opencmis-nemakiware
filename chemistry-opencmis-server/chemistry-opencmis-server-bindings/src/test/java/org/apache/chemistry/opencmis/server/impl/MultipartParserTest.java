@@ -18,11 +18,12 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,13 +32,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.server.impl.browser.MultipartParser;
 import org.apache.chemistry.opencmis.server.shared.TempStoreOutputStreamFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the multipart parser.
@@ -367,29 +368,30 @@ public class MultipartParserTest {
         }
     }
 
-    @Test(expected = CmisInvalidArgumentException.class)
-    public void testNoBoundary() throws Exception {
+    @Test
+    public void testNoBoundary() {
         String boundary = "";
         byte[] formdata = ("\r\n--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"field1\"\r\n"
                 + "\r\n" + "value1\r\n" + "--" + boundary + "--").getBytes();
 
-        prepareParser(boundary, formdata);
+        assertThrows(CmisInvalidArgumentException.class, () -> prepareParser(boundary, formdata));
     }
 
-    @Test(expected = CmisInvalidArgumentException.class)
-    public void testInvalidCharset() throws Exception {
+    @Test
+    public void testInvalidCharset() {
         String boundary = "15983409582340582340";
         byte[] formdata = ("\r\n--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"field1\"\r\n"
                 + "Content-Type: text/plain; charset=xyz\r\n" + "\r\n" + "value1\r\n" + "--" + boundary + "--")
                 .getBytes();
 
-        MultipartParser parser = prepareParser(boundary, formdata);
-
-        assertMultipartBasics(parser, 1, null, false, null, null, null);
+        assertThrows(CmisInvalidArgumentException.class, () -> {
+            MultipartParser parser = prepareParser(boundary, formdata);
+            assertMultipartBasics(parser, 1, null, false, null, null, null);
+        });
     }
 
-    @Test(expected = CmisInvalidArgumentException.class)
-    public void testTwoContentParts() throws Exception {
+    @Test
+    public void testTwoContentParts() {
         String boundary = "-?-";
         byte[] content = "abc������".getBytes();
         byte[] formdata = ("\r\n--" + boundary + "\r\n"
@@ -400,9 +402,10 @@ public class MultipartParserTest {
                 + "Content-Type: application/something\r\n" + "Content-Transfer-Encoding: binary\r\n" + "\r\n"
                 + new String(content) + "\r\n" + "--" + boundary + "--").getBytes();
 
-        MultipartParser parser = prepareParser(boundary, formdata);
-
-        assertMultipartBasics(parser, 2, null, true, "file1", "application/something", content);
+        assertThrows(CmisInvalidArgumentException.class, () -> {
+            MultipartParser parser = prepareParser(boundary, formdata);
+            assertMultipartBasics(parser, 2, null, true, "file1", "application/something", content);
+        });
     }
 
     // ---- helpers ----

@@ -20,10 +20,10 @@ package org.apache.chemistry.opencmis.server.impl.webservices;
 
 import java.math.BigInteger;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.soap.MTOM;
+import jakarta.jws.WebMethod;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.impl.jaxb.CmisException;
 import org.apache.chemistry.opencmis.commons.impl.jaxb.CmisExtensionType;
@@ -40,7 +40,7 @@ public class RepositoryService10 extends RepositoryService implements Repository
 
     @Override
     @WebMethod(exclude = true)
-    public void createType(String repositoryId, Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
+    public void createType(String repositoryId, jakarta.xml.ws.Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
             throws CmisException {
         CmisFaultType fault = new CmisFaultType();
         fault.setCode(BigInteger.ZERO);
@@ -52,7 +52,7 @@ public class RepositoryService10 extends RepositoryService implements Repository
 
     @Override
     @WebMethod(exclude = true)
-    public void updateType(String repositoryId, Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
+    public void updateType(String repositoryId, jakarta.xml.ws.Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
             throws CmisException {
         CmisFaultType fault = new CmisFaultType();
         fault.setCode(BigInteger.ZERO);
@@ -64,7 +64,7 @@ public class RepositoryService10 extends RepositoryService implements Repository
 
     @Override
     @WebMethod(exclude = true)
-    public void deleteType(String repositoryId, String typeId, Holder<CmisExtensionType> extension)
+    public void deleteType(String repositoryId, String typeId, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
         CmisFaultType fault = new CmisFaultType();
         fault.setCode(BigInteger.ZERO);

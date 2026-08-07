@@ -52,6 +52,7 @@ public class QueryLikeTest extends AbstractQueryTest {
             Folder testFolder = createTestFolder(session);
 
             try {
+                // Create test documents and folders (a-z = 26 characters, 52 objects total)
                 for (char c = 'a'; c <= 'z'; c++) {
                     createDocument(session, testFolder, c + "Document", CONTENT);
                     createFolder(session, testFolder, c + "Folder");
@@ -70,6 +71,7 @@ public class QueryLikeTest extends AbstractQueryTest {
 
                 CmisTestResult f;
 
+                // Query and verify all created documents and folders
                 for (char c = 'a'; c <= 'z'; c++) {
                     // query documents
                     long timestamp = Long.MIN_VALUE;

@@ -1,0 +1,8 @@
+# Frozen from ANTLR3/4 differential parity (Ext keyword casing + aliases)
+ok	query	select foo from bar	(select (SEL_LIST (COL foo)) (from (TABLE bar)))
+ok	query	Select Foo From Bar	(Select (SEL_LIST (COL Foo)) (From (TABLE Bar)))
+ok	query	sElEcT foo FrOm bar	(sElEcT (SEL_LIST (COL foo)) (FrOm (TABLE bar)))
+ok	query	select * from cmis:document where cmis:name = 'x'	(select * (from (TABLE cmis:document)) (where (= (COL cmis:name) 'x')))
+ok	query	SELECT SCORE() AS s FROM t	(SELECT (SEL_LIST SCORE s) (FROM (TABLE t)))
+ok	query	SELECT f AS x FROM t	(SELECT (SEL_LIST (COL f) x) (FROM (TABLE t)))
+ok	query	SELECT f x FROM t	(SELECT (SEL_LIST (COL f) x) (FROM (TABLE t)))

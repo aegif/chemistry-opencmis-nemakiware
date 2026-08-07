@@ -18,12 +18,12 @@
  */
 package org.apache.chemistry.opencmis.commons.impl.misc;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.chemistry.opencmis.commons.enums.IncludeRelationships;
 import org.apache.chemistry.opencmis.commons.impl.ReturnVersion;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * UrlBuilder tests.

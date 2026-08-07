@@ -20,12 +20,12 @@ package org.apache.chemistry.opencmis.server.shared;
 
 import java.util.Map;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.chemistry.opencmis.commons.enums.CmisVersion;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisPermissionDeniedException;
@@ -76,8 +76,7 @@ public abstract class AbstractCmisHttpServlet extends HttpServlet {
         String callContextHandlerClass = config.getInitParameter(PARAM_CALL_CONTEXT_HANDLER);
         if (callContextHandlerClass != null) {
             try {
-                return (CallContextHandler) ClassLoaderUtil.loadClass(callContextHandlerClass).getDeclaredConstructor()
-                        .newInstance();
+                return (CallContextHandler) ClassLoaderUtil.loadClass(callContextHandlerClass).newInstance();
             } catch (Exception e) {
                 throw new ServletException("Could not load call context handler: " + e, e);
             }

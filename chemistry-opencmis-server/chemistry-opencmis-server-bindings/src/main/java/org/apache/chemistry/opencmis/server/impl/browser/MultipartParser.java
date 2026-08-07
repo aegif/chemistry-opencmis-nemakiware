@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
@@ -456,7 +456,8 @@ public class MultipartParser {
 
         Map<String, String> params = new HashMap<String, String>();
         MimeHelper.decodeContentDisposition(contentDisposition, params);
-        boolean isContent = params.containsKey(MimeHelper.DISPOSITION_FILENAME);
+        String fieldName = params.get(MimeHelper.DISPOSITION_NAME);
+        boolean isContent = params.containsKey(MimeHelper.DISPOSITION_FILENAME) || "content".equals(fieldName);
 
         if (isContent) {
             if (hasContent) {

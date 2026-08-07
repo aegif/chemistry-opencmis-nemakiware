@@ -18,8 +18,8 @@
  */
 package org.apache.chemistry.opencmis.client.runtime;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -31,7 +31,7 @@ import java.util.TimeZone;
 
 import org.apache.chemistry.opencmis.client.api.QueryStatement;
 import org.apache.chemistry.opencmis.client.api.Session;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class QueryStatementTest {
 

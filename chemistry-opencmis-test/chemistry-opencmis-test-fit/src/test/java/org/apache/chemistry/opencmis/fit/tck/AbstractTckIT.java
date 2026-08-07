@@ -19,23 +19,23 @@
 package org.apache.chemistry.opencmis.fit.tck;
 
 import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNullOrEmpty;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
-import org.apache.catalina.Container;
-import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleEvent;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.LifecycleListener;
 import org.apache.catalina.LifecycleState;
-import org.apache.catalina.core.StandardContext;
-import org.apache.catalina.core.StandardHost;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
@@ -49,11 +49,10 @@ import org.apache.chemistry.opencmis.tck.CmisTestResultStatus;
 import org.apache.chemistry.opencmis.tck.impl.TestParameters;
 import org.apache.chemistry.opencmis.tck.report.TextReport;
 import org.apache.chemistry.opencmis.tck.runner.AbstractRunner;
-import org.apache.tomcat.util.scan.StandardJarScanner;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractTckIT extends AbstractRunner {
     public static final String TEST = "org.apache.chemistry.opencmis.tck.test";
@@ -95,6 +94,11 @@ public abstract class AbstractTckIT extends AbstractRunner {
                 System.getProperty(SessionParameter.REPOSITORY_ID, REPOSITORY_ID));
         parameters.put(SessionParameter.USER, System.getProperty(SessionParameter.USER, USER));
         parameters.put(SessionParameter.PASSWORD, System.getProperty(SessionParameter.PASSWORD, PASSWORD));
+        // Ensure HTTP Basic / UsernameToken so CallContext has a non-empty user
+        // (Browser/WebServices otherwise risk empty cmis:createdBy values).
+        parameters.put(SessionParameter.AUTH_HTTP_BASIC, "true");
+        parameters.put(SessionParameter.AUTH_SOAP_USERNAMETOKEN, "true");
+        // Use the library default Apache HttpClient 5 invoker (pool + eager buffer).
 
         if (usesVersionableDocumentType()) {
             parameters.put(TestParameters.DEFAULT_DOCUMENT_TYPE,
@@ -113,20 +117,44 @@ public abstract class AbstractTckIT extends AbstractRunner {
     private static Tomcat tomcat;
     private static File tomcateBaseDir;
 
-    @BeforeClass
+    @BeforeAll
     public static void startTomcat() throws LifecycleException, InterruptedException {
         File targetDir = new File(System.getProperty("project.build.directory", "./target"));
+        if (!targetDir.isDirectory()) {
+            throw new RuntimeException("Build directory not found: " + targetDir.getAbsolutePath());
+        }
 
-        File warFile = null;
-        for (File child : targetDir.listFiles()) {
-            if (child.getName().endsWith(".war")) {
-                warFile = child;
+        // Prefer the reactor finalName so leftover WARs from older versions cannot
+        // silently become the FIT subject (directory listing order is undefined).
+        String finalName = System.getProperty("project.build.finalName");
+        File warFile;
+        if (finalName != null && !finalName.trim().isEmpty()) {
+            warFile = new File(targetDir, finalName.trim() + ".war");
+            if (!warFile.isFile()) {
+                throw new RuntimeException("Expected OpenCMIS WAR not found: " + warFile.getAbsolutePath());
             }
+        } else {
+            File[] wars = targetDir.listFiles((dir, name) -> name.endsWith(".war"));
+            if (wars == null || wars.length == 0) {
+                throw new RuntimeException("OpenCMIS WAR file not found in " + targetDir.getAbsolutePath());
+            }
+            if (wars.length > 1) {
+                StringBuilder names = new StringBuilder();
+                for (File w : wars) {
+                    if (names.length() > 0) {
+                        names.append(", ");
+                    }
+                    names.append(w.getName());
+                }
+                throw new RuntimeException(
+                        "Multiple WAR files in " + targetDir.getAbsolutePath()
+                                + " and project.build.finalName is unset: " + names);
+            }
+            warFile = wars[0];
         }
 
-        if (warFile == null) {
-            throw new RuntimeException("OpenCMIS WAR file not found!");
-        }
+        System.out.println("FIT deploying WAR: " + warFile.getAbsolutePath());
+        assertNoDuplicateOpenCmisLibs(warFile);
 
         portCounter++;
 
@@ -138,22 +166,11 @@ public abstract class AbstractTckIT extends AbstractRunner {
         // Logger.getLogger("").setLevel(Level.INFO);
         System.setProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager");
 
-        tomcat = new Tomcat() {
-            @Override
-            public void start() throws LifecycleException {
-                for (org.apache.catalina.Service service : getServer().findServices()) {
-                    for (Container container : service.getContainer().findChildren()) {
-                        for (Container subContainer : container.findChildren()) {
-                            ((StandardJarScanner) ((Context) subContainer).getJarScanner()).setScanClassPath(false);
-                        }
-                    }
-                }
-                super.start();
-            }
-        };
-
+        tomcat = new Tomcat();
         tomcat.setBaseDir(tomcateBaseDir.getAbsolutePath());
         tomcat.setPort(getPort());
+        // Tomcat 9+/10+/11 embed requires an explicit connector before start.
+        tomcat.getConnector();
         // tomcat.setSilent(true);
         tomcat.getHost().setCreateDirs(true);
         tomcat.getHost().setDeployOnStartup(true);
@@ -175,7 +192,7 @@ public abstract class AbstractTckIT extends AbstractRunner {
             appDir.mkdir();
         }
 
-        tomcat.addWebapp(null, "/opencmis", warFile.getAbsolutePath());
+        tomcat.addWebapp("/opencmis", warFile.getAbsolutePath());
         tomcat.init();
         tomcat.start();
 
@@ -188,10 +205,11 @@ public abstract class AbstractTckIT extends AbstractRunner {
             Thread.sleep(500);
         }
 
-        Thread.sleep(5000);
+        // Short settle wait; readiness is primarily the STARTED poll above.
+        Thread.sleep(1000);
     }
 
-    @AfterClass
+    @AfterAll
     public static void stopTomcat() throws LifecycleException, InterruptedException {
         tomcat.stop();
         tomcat.destroy();
@@ -229,30 +247,30 @@ public abstract class AbstractTckIT extends AbstractRunner {
         }
     }
 
-    @Before
+    @BeforeEach
     public void checkTest() {
-        assumeTrue("Skipping all TCK tests.", getSystemPropertyBoolean(TEST));
+        assumeTrue(getSystemPropertyBoolean(TEST), "Skipping all TCK tests.");
 
         if (getCmisVersion() == CmisVersion.CMIS_1_0) {
-            assumeTrue("Skipping CMIS 1.0 TCK tests.", getSystemPropertyBoolean(TEST_CMIS_1_0));
+            assumeTrue(getSystemPropertyBoolean(TEST_CMIS_1_0), "Skipping CMIS 1.0 TCK tests.");
         } else if (getCmisVersion() == CmisVersion.CMIS_1_1) {
-            assumeTrue("Skipping CMIS 1.1 TCK tests.", getSystemPropertyBoolean(TEST_CMIS_1_1));
+            assumeTrue(getSystemPropertyBoolean(TEST_CMIS_1_1), "Skipping CMIS 1.1 TCK tests.");
         }
 
         if (getBindingType() == BindingType.ATOMPUB) {
-            assumeTrue("Skipping AtomPub binding TCK tests.", getSystemPropertyBoolean(TEST_ATOMPUB));
+            assumeTrue(getSystemPropertyBoolean(TEST_ATOMPUB), "Skipping AtomPub binding TCK tests.");
         } else if (getBindingType() == BindingType.WEBSERVICES) {
-            assumeTrue("Skipping Web Services binding TCK tests.", getSystemPropertyBoolean(TEST_WEBSERVICES));
+            assumeTrue(getSystemPropertyBoolean(TEST_WEBSERVICES), "Skipping Web Services binding TCK tests.");
         } else if (getBindingType() == BindingType.BROWSER) {
-            assumeTrue("Skipping Browser binding TCK tests.", getSystemPropertyBoolean(TEST_BROWSER));
+            assumeTrue(getSystemPropertyBoolean(TEST_BROWSER), "Skipping Browser binding TCK tests.");
         }
 
         if (usesVersionableDocumentType()) {
-            assumeTrue("Skipping TCK tests with versionable document types.",
-                    getSystemPropertyBoolean(TEST_VERSIONABLE));
+            assumeTrue(getSystemPropertyBoolean(TEST_VERSIONABLE),
+                    "Skipping TCK tests with versionable document types.");
         } else {
-            assumeTrue("Skipping TCK tests with non-versionable document types.",
-                    getSystemPropertyBoolean(TEST_NOT_VERSIONABLE));
+            assumeTrue(getSystemPropertyBoolean(TEST_NOT_VERSIONABLE),
+                    "Skipping TCK tests with non-versionable document types.");
         }
     }
 
@@ -281,13 +299,13 @@ public abstract class AbstractTckIT extends AbstractRunner {
         for (CmisTestGroup group : getGroups()) {
             for (CmisTest test : group.getTests()) {
                 for (CmisTestResult result : test.getResults()) {
-                    assertNotNull("The test '" + test.getName() + "' returned an invalid result.", result);
-                    assertTrue("The test '" + test.getName() + "' returned a failure: " + result.getMessage(),
-                            result.getStatus() != CmisTestResultStatus.FAILURE);
+                    assertNotNull(result, "The test '" + test.getName() + "' returned an invalid result.");
+                    assertTrue(result.getStatus() != CmisTestResultStatus.FAILURE,
+                            "The test '" + test.getName() + "' returned a failure: " + result.getMessage());
                     assertTrue(
-                            "The test '" + test.getName() + "' returned at an unexpected exception: "
-                                    + result.getMessage(),
-                            result.getStatus() != CmisTestResultStatus.UNEXPECTED_EXCEPTION);
+                            result.getStatus() != CmisTestResultStatus.UNEXPECTED_EXCEPTION,
+                            "The test '" + test.getName() + "' returned at an unexcepted exception: "
+                                    + result.getMessage());
                 }
             }
         }
@@ -307,6 +325,38 @@ public abstract class AbstractTckIT extends AbstractRunner {
         }
 
         return CmisTestResultStatus.fromLevel(max);
+    }
+
+    /**
+     * Polluted local {@code target/} trees can produce WARs that embed multiple
+     * versions of the same OpenCMIS jar (e.g. 1.1.3 and 2.0.0). Tomcat then
+     * loads an unpredictable mix and FIT results are meaningless.
+     */
+    private static void assertNoDuplicateOpenCmisLibs(File warFile) {
+        Map<String, String> artifactToJar = new HashMap<String, String>();
+        try (JarFile jarFile = new JarFile(warFile)) {
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String name = entry.getName();
+                if (!name.startsWith("WEB-INF/lib/") || !name.endsWith(".jar") || name.indexOf('/', 12) >= 0) {
+                    continue;
+                }
+                String fileName = name.substring("WEB-INF/lib/".length());
+                if (!fileName.startsWith("chemistry-opencmis-")) {
+                    continue;
+                }
+                String artifactKey = fileName.replaceFirst("-\\d.*\\.jar$", "");
+                String previous = artifactToJar.put(artifactKey, fileName);
+                if (previous != null) {
+                    throw new RuntimeException("WAR contains duplicate OpenCMIS libraries for '" + artifactKey
+                            + "': " + previous + " and " + fileName
+                            + ". Run 'mvn clean' before packaging FIT / inmemory WARs.");
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not inspect WAR libraries: " + warFile.getAbsolutePath(), e);
+        }
     }
 
     private static class TestProgressMonitor implements CmisTestProgressMonitor {

@@ -33,19 +33,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.stream.StreamResult;
@@ -423,6 +425,24 @@ public class LoggingFilter implements Filter {
                 throw new CmisRuntimeException("Unsupported encoding 'UTF-8'!", e);
             }
         }
+
+        @Override
+        public boolean isFinished() {
+            // Delegate to the wrapped input stream if it supports this method
+            return is.isFinished();
+        }
+
+        @Override
+        public boolean isReady() {
+            // Delegate to the wrapped input stream if it supports this method
+            return is.isReady();
+        }
+
+        @Override
+        public void setReadListener(ReadListener readListener) {
+            // Delegate to the wrapped input stream
+            is.setReadListener(readListener);
+        }
     }
 
     private static class LoggingResponseWrapper extends HttpServletResponseWrapper {
@@ -631,6 +651,18 @@ public class LoggingFilter implements Filter {
         public void write(int ch) throws IOException {
             baous.write(ch);
             os.write(ch);
+        }
+
+        @Override
+        public boolean isReady() {
+            // Delegate to the wrapped output stream if it supports this method
+            return os.isReady();
+        }
+
+        @Override
+        public void setWriteListener(WriteListener writeListener) {
+            // Delegate to the wrapped output stream
+            os.setWriteListener(writeListener);
         }
     }
 }

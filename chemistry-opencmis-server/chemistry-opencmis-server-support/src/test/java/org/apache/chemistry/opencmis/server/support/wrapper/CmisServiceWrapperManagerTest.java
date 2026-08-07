@@ -20,7 +20,7 @@
  */
 package org.apache.chemistry.opencmis.server.support.wrapper;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -37,7 +37,7 @@ import org.apache.chemistry.opencmis.commons.definitions.TypeDefinitionList;
 import org.apache.chemistry.opencmis.commons.enums.IncludeRelationships;
 import org.apache.chemistry.opencmis.commons.impl.server.AbstractCmisService;
 import org.apache.chemistry.opencmis.commons.server.CmisService;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CmisServiceWrapperManagerTest {
 

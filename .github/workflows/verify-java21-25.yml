@@ -1,0 +1,156 @@
+name: Verify Java 21 and 25 Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+      - "codex/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: ["21", "25"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: maven
+
+      - name: Build full reactor (skip tests)
+        run: |
+          mvn -DskipTests install
+
+      - name: Run required-module unit tests
+        run: >
+          mvn -pl
+          chemistry-opencmis-commons/chemistry-opencmis-commons-api,chemistry-opencmis-commons/chemistry-opencmis-commons-impl,chemistry-opencmis-client/chemistry-opencmis-client-api,chemistry-opencmis-client/chemistry-opencmis-client-bindings,chemistry-opencmis-client/chemistry-opencmis-client-impl,chemistry-opencmis-server/chemistry-opencmis-server-support,chemistry-opencmis-server/chemistry-opencmis-server-bindings,chemistry-opencmis-server/chemistry-opencmis-server-inmemory,chemistry-opencmis-test/chemistry-opencmis-test-tck
+          -am test -Dopencmis.integration.tests.skip=true
+
+      - name: Run server-bindings compatibility smoke tests
+        run: >
+          mvn -f chemistry-opencmis-server/chemistry-opencmis-server-bindings/pom.xml
+          test
+          -Dtest=HttpUtilsTest,ThresholdOutputStreamTest,ProxyRequestTest,MultipartParserTest
+
+      - name: Run ANTLR compatibility script (floors + corpus cross-check)
+        run: |
+          chmod +x scripts/antlr4-compat-check.sh
+          ./scripts/antlr4-compat-check.sh
+
+      - name: Run query gates on target modules only (missing tests fail)
+        run: |
+          mvn -pl chemistry-opencmis-server/chemistry-opencmis-server-support \
+            test -Dtest=QueryAstCorpusTest
+          mvn -pl chemistry-opencmis-server/chemistry-opencmis-server-inmemory \
+            test -Dtest=QuerySemanticSnapshotTest
+
+      - name: Package Workbench
+        run: >
+          mvn -pl chemistry-opencmis-workbench/chemistry-opencmis-workbench
+          -am package -DskipTests
+
+      - name: Package OSGi client bundle
+        run: |
+          mvn -pl chemistry-opencmis-osgi/chemistry-opencmis-osgi-client -am package -DskipTests
+          chmod +x scripts/osgi-bundle-check.sh
+          ./scripts/osgi-bundle-check.sh
+
+      - name: Package and JVM-smoke Android client
+        run: |
+          mvn -pl chemistry-opencmis-android/chemistry-opencmis-android-client \
+            test -Dtest=AndroidStaxSmokeTest
+          mvn -pl chemistry-opencmis-android/chemistry-opencmis-android-client \
+            package -DskipTests
+
+      - name: Android D8 DEX smoke (API 26)
+        run: |
+          chmod +x scripts/android-d8-smoke.sh
+          ./scripts/android-d8-smoke.sh
+
+  # Required CMIS 1.1 NonVers FIT for AtomPub, Browser, and Web Services (Java 21).
+  fit-bindings:
+    runs-on: ubuntu-latest
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - it-test: AtomPub11NonVersTckIT
+            atompub: "true"
+            browser: "false"
+            webservices: "false"
+          - it-test: Browser11NonVersTckIT
+            atompub: "false"
+            browser: "true"
+            webservices: "false"
+          - it-test: WebServices11NonVersTckIT
+            atompub: "false"
+            browser: "false"
+            webservices: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Install reactor (skip tests)
+        run: |
+          mvn -pl chemistry-opencmis-test/chemistry-opencmis-test-fit -am clean install -DskipTests
+
+      - name: Run ${{ matrix.it-test }}
+        run: >
+          mvn -pl chemistry-opencmis-test/chemistry-opencmis-test-fit
+          failsafe:integration-test failsafe:verify
+          -Dit.test=${{ matrix.it-test }}
+          -Dorg.apache.chemistry.opencmis.tck.testAtomPub=${{ matrix.atompub }}
+          -Dorg.apache.chemistry.opencmis.tck.testBrowser=${{ matrix.browser }}
+          -Dorg.apache.chemistry.opencmis.tck.testWebServices=${{ matrix.webservices }}
+          -Dorg.apache.chemistry.opencmis.tck.testCmis10=false
+          -Dorg.apache.chemistry.opencmis.tck.testCmis11=true
+
+  android-emulator:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Android emulator smoke (API 26)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 26
+          arch: x86_64
+          target: default
+          script: |
+            chmod +x scripts/android-d8-smoke.sh scripts/android-emulator-smoke.sh
+            ./scripts/android-emulator-smoke.sh

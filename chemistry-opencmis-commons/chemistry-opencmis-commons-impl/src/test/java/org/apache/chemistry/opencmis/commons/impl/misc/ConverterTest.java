@@ -28,8 +28,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.commons.data.ObjectData;
 import org.apache.chemistry.opencmis.commons.data.PermissionMapping;
@@ -54,12 +56,12 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.PermissionDefiniti
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.PermissionMappingDataImpl;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.RepositoryCapabilitiesImpl;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.RepositoryInfoImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests converter methods.
  */
-public class ConverterTest extends TestCase {
+public class ConverterTest {
 
     @Test
     public void testRepositoryInfo() throws Exception {

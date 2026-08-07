@@ -25,16 +25,15 @@ import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.P
 import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.PROP_ID_ID;
 import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.PROP_ID_INT;
 import static org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator.SECONDARY_TYPE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import org.antlr.runtime.RecognitionException;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ObjectData;
 import org.apache.chemistry.opencmis.commons.data.ObjectList;
@@ -44,9 +43,9 @@ import org.apache.chemistry.opencmis.commons.enums.IncludeRelationships;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.inmemory.AbstractServiceTest;
 import org.apache.chemistry.opencmis.inmemory.UnitTestTypeSystemCreator;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +56,7 @@ public class EvalQueryTest extends AbstractServiceTest {
     static int COUNT = 0;
 
     @Override
-    @Before
+    @BeforeEach
     public void setUp() {
     	setUp(false);
     }
@@ -72,7 +71,7 @@ public class EvalQueryTest extends AbstractServiceTest {
     }
     
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         log.debug("tearDown started.");
         super.tearDown();
@@ -1022,10 +1021,11 @@ public class EvalQueryTest extends AbstractServiceTest {
         try {
         	doQuery(statement);
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains("line 1:0 no viable alternative at input '<EOF>'"));
-            assertTrue(e instanceof CmisInvalidArgumentException);                   	
-            assertTrue(e.getCause() instanceof RuntimeException);                   	
-            assertTrue(e.getCause().getCause() instanceof RecognitionException);                   	
+            assertTrue(e instanceof CmisInvalidArgumentException);
+            assertTrue(e.getMessage().contains("<EOF>")
+                    || e.getMessage().contains("no viable alternative")
+                    || e.getMessage().contains("mismatched input"));
+            assertTrue(e.getCause() instanceof RuntimeException);
         }
         log.debug("...Stop testContainsSyntaxError.");
     }

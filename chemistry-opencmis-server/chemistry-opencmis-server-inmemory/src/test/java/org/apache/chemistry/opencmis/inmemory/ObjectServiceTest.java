@@ -18,12 +18,12 @@
  */
 package org.apache.chemistry.opencmis.inmemory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -89,9 +89,9 @@ import org.apache.chemistry.opencmis.inmemory.storedobj.impl.RenditionUtil;
 import org.apache.chemistry.opencmis.inmemory.types.DocumentTypeCreationHelper;
 import org.apache.chemistry.opencmis.inmemory.types.PropertyCreationHelper;
 import org.apache.chemistry.opencmis.server.support.TypeDefinitionFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -144,7 +144,7 @@ public class ObjectServiceTest extends AbstractServiceTest {
     ObjectCreator fCreator;
 
     @Override
-    @Before
+    @BeforeEach
     public void setUp() {
         super.setTypeCreatorClass(ObjectTestTypeSystemCreator.class.getName());
         super.setUp();
@@ -152,7 +152,7 @@ public class ObjectServiceTest extends AbstractServiceTest {
     }
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }
@@ -1015,8 +1015,7 @@ public class ObjectServiceTest extends AbstractServiceTest {
 
         try {
             InputStream imageStream = this.getClass().getResourceAsStream("/image.jpg");
-            assertNotNull("Test setup failure no 'image.jpg' in test resources, getResourceAsStream failed",
-                    imageStream);
+            assertNotNull(imageStream, "Test setup failure no 'image.jpg' in test resources, getResourceAsStream failed");
             String id = createDocumentFromStream("TestJpegImage", fRootFolderId, DOCUMENT_TYPE_ID, imageStream, JPEG);
 
             assertNotNull(id);
@@ -1090,8 +1089,7 @@ public class ObjectServiceTest extends AbstractServiceTest {
 
         try {
             InputStream imageStream = this.getClass().getResourceAsStream("/image.jpg");
-            assertNotNull("Test setup failure no 'image.jpg' in test resources, getResourceAsStream failed",
-                    imageStream);
+            assertNotNull(imageStream, "Test setup failure no 'image.jpg' in test resources, getResourceAsStream failed");
             String id = createFolder();
 
             assertNotNull(id);

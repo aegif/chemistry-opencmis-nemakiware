@@ -24,8 +24,15 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 
-import junit.framework.TestCase;
 
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.AtomEntryWriter;
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.AtomPubParser;
@@ -47,11 +54,12 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.PropertyStringImpl
 /**
  * Minimal test for AtomEntryWriter and AtomPubParser.
  */
-public class AtomParserTest extends TestCase {
+public class AtomParserTest {
 
     private static final byte[] CONTENT = "This is my test content!".getBytes();
     private static final String CONTENT_TYPE = "text/plain";
 
+    @Test
     public void testParser() throws Exception {
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
 
@@ -110,11 +118,11 @@ public class AtomParserTest extends TestCase {
             PropertyData<?> property2 = object2.getProperties().getProperties().get(property1.getId());
 
             assertNotNull(property2);
-            assertEquals(property1, property2);
+            assertPropertyEquals(property1, property2);
         }
     }
 
-    protected void assertEquals(PropertyData<?> expected, PropertyData<?> actual) throws Exception {
+    protected void assertPropertyEquals(PropertyData<?> expected, PropertyData<?> actual) throws Exception {
         if (expected == null && actual == null) {
             return;
         }

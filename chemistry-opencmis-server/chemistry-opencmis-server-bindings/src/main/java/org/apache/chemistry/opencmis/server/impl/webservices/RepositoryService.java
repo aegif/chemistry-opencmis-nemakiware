@@ -27,11 +27,11 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Resource;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.soap.MTOM;
+import jakarta.annotation.Resource;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.data.ExtensionsData;
 import org.apache.chemistry.opencmis.commons.data.RepositoryInfo;
@@ -204,7 +204,7 @@ public class RepositoryService extends AbstractService implements RepositoryServ
     }
 
     @Override
-    public void createType(String repositoryId, Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
+    public void createType(String repositoryId, jakarta.xml.ws.Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
             throws CmisException {
         CmisService service = null;
         try {
@@ -229,7 +229,7 @@ public class RepositoryService extends AbstractService implements RepositoryServ
     }
 
     @Override
-    public void updateType(String repositoryId, Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
+    public void updateType(String repositoryId, jakarta.xml.ws.Holder<CmisTypeDefinitionType> type, CmisExtensionType extension)
             throws CmisException {
         CmisService service = null;
         try {
@@ -254,7 +254,7 @@ public class RepositoryService extends AbstractService implements RepositoryServ
     }
 
     @Override
-    public void deleteType(String repositoryId, String typeId, Holder<CmisExtensionType> extension)
+    public void deleteType(String repositoryId, String typeId, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
 
         CmisService service = null;

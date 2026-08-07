@@ -69,7 +69,7 @@ import org.apache.chemistry.opencmis.workbench.swing.InfoPanel;
 import org.apache.chemistry.opencmis.workbench.worker.LoadObjectWorker;
 import org.apache.chemistry.opencmis.workbench.worker.TempFileContentWorker;
 
-import groovy.ui.Console;
+import groovy.console.ui.Console;
 
 public class ObjectPanel extends InfoPanel implements ObjectListener {
 

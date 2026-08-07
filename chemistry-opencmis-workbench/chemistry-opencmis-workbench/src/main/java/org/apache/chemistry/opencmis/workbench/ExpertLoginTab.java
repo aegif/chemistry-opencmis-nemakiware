@@ -207,9 +207,9 @@ public class ExpertLoginTab extends AbstractLoginTab {
                 SessionParameter.CLIENT_CERT_KEYFILE, SessionParameter.CLIENT_CERT_PASSPHRASE));
 
         popup.add(createMenuGroup("HTTP Invoker",
-                SessionParameter.HTTP_INVOKER_CLASS + "=" + DefaultHttpInvoker.class.getName(),
                 SessionParameter.HTTP_INVOKER_CLASS + "=" + ApacheClientHttpInvoker.class.getName(),
-                SessionParameter.HTTP_INVOKER_CLASS + "=" + OkHttpHttpInvoker.class.getName()));
+                SessionParameter.HTTP_INVOKER_CLASS + "=" + OkHttpHttpInvoker.class.getName(),
+                SessionParameter.HTTP_INVOKER_CLASS + "=" + DefaultHttpInvoker.class.getName()));
 
         sessionParameterTextArea.addMouseListener(new MouseAdapter() {
             @Override

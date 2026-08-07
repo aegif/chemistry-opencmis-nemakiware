@@ -18,19 +18,19 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestParserExt extends AbstractParserTest {
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         super.setUp(CmisQlExtLexer.class, CmisQlExtParser.class, null, "CmisBaseLexer");
     }
 
     @Override
-    @After
+    @AfterEach
     public void tearDown() {
         super.tearDown();
     }
@@ -43,7 +43,7 @@ public class TestParserExt extends AbstractParserTest {
     @Test
     public void test_query1() {
         testParser("query", "SELECT DISTINCT a, b, c FROM Document",
-                "(SELECT DISTINCT (LIST (COL a) (COL b) (COL c)) (FROM (TABLE Document)))");
+                "(SELECT DISTINCT (SEL_LIST (COL a) (COL b) (COL c)) (FROM (TABLE Document)))");
     }
 
     @Test

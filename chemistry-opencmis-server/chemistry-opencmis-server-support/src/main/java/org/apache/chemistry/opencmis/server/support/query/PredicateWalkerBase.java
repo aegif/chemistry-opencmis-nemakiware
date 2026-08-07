@@ -18,7 +18,6 @@
  */
 package org.apache.chemistry.opencmis.server.support.query;
 
-import org.antlr.runtime.tree.Tree;
 
 /**
  * Base interface for a tree walker of a WHERE clause.
@@ -30,6 +29,6 @@ import org.antlr.runtime.tree.Tree;
  */
 public interface PredicateWalkerBase {
 
-    Boolean walkPredicate(Tree whereNode);
+    Boolean walkPredicate(CmisTree whereNode);
 
 }

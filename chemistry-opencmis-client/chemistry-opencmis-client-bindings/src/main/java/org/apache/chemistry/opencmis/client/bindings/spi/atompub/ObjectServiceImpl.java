@@ -19,7 +19,6 @@
 package org.apache.chemistry.opencmis.client.bindings.spi.atompub;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -36,6 +35,7 @@ import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomEnt
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomFeed;
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomLink;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Output;
+import org.apache.chemistry.opencmis.client.bindings.spi.http.StreamableOutput;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Response;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
@@ -60,7 +60,6 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentExcep
 import org.apache.chemistry.opencmis.commons.exceptions.CmisNotSupportedException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 import org.apache.chemistry.opencmis.commons.impl.Constants;
-import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.commons.impl.MimeHelper;
 import org.apache.chemistry.opencmis.commons.impl.ReturnVersion;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
@@ -464,6 +463,7 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
     @Override
     public void deleteObject(String repositoryId, String objectId, Boolean allVersions, ExtensionsData extension) {
 
+
         // find the link
         String link = loadLink(repositoryId, objectId, Constants.REL_SELF, Constants.MEDIATYPE_ENTRY);
 
@@ -475,6 +475,12 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
         url.addParameter(Constants.PARAM_ALL_VERSIONS, allVersions);
 
         delete(url);
+
+        // TCK FIX (2025-11-02): Remove object from link cache after deletion
+        // Root cause: AbstractSessionTest.exists() calls object.refresh() which uses cached links
+        // If links remain in cache after deletion, checkLink() returns index 2 (rel missing)
+        // causing CmisNotSupportedException instead of proper objectNotFound behavior
+        removeLinks(repositoryId, objectId);
     }
 
     @Override
@@ -522,6 +528,10 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
 
         // check response code
         if (resp.getResponseCode() == 200 || resp.getResponseCode() == 202 || resp.getResponseCode() == 204) {
+            // TCK FIX (2025-11-02): Remove folder from link cache after successful tree deletion
+            // Same issue as deleteObject() - folders deleted via deleteTree() also need cache cleanup
+            // to prevent CmisNotSupportedException on subsequent exists() checks
+            removeLinks(repositoryId, folderId);
             return new FailedToDeleteDataImpl();
         }
 
@@ -843,8 +853,6 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
             url.addParameter(Constants.PARAM_OVERWRITE_FLAG, overwriteFlag);
         }
 
-        final InputStream stream = contentStream.getStream();
-
         // Content-Disposition header for the filename
         Map<String, String> headers = null;
         if (contentStream.getFileName() != null) {
@@ -855,13 +863,10 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
                                     contentStream.getFileName()));
         }
 
-        // send content
-        Response resp = put(url, contentStream.getMimeType(), headers, new Output() {
-            @Override
-            public void write(OutputStream out) throws IOException {
-                IOUtils.copy(stream, out);
-            }
-        });
+        // Prefer StreamableOutput when length is known so HC5 can send with
+        // Content-Length without spooling the entire body first.
+        Response resp = put(url, contentStream.getMimeType(), headers,
+                StreamableOutput.fromContentStream(contentStream));
 
         // check response code further
         if ((resp.getResponseCode() != 200) && (resp.getResponseCode() != 201) && (resp.getResponseCode() != 204)) {

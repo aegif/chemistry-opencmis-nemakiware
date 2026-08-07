@@ -21,8 +21,7 @@ package org.apache.chemistry.opencmis.commons;
 /**
  * Session parameter constants.
  * 
- * <table class="chemistry-table">
- * <caption>Session Parameters</caption>
+ * <table border="2" rules="all" cellpadding="4" summary="Session Parameters">
  * <tr>
  * <th>Constant</th>
  * <th>Description</th>
@@ -147,7 +146,7 @@ package org.apache.chemistry.opencmis.commons;
  * <td>AtomPub, Web Services, Browser</td>
  * <td>class name</td>
  * <td>no</td>
- * <td>org.apache.chemistry.opencmis.client.bindings.spi.http.DefaultHttpInvoker
+ * <td>org.apache.chemistry.opencmis.client.bindings.spi.http.ApacheClientHttpInvoker
  * </td>
  * </tr>
  * <tr>
@@ -216,19 +215,137 @@ package org.apache.chemistry.opencmis.commons;
  * </tr>
  * <tr>
  * <td>{@link #CONNECT_TIMEOUT}</td>
- * <td>HTTP connect timeout</td>
- * <td>AtomPub, Web Services, Browser</td>
+ * <td>HTTP connect timeout (also used as connection-lease wait for Apache
+ * HttpClient 5 when {@link #HTTP_CONNECTION_REQUEST_TIMEOUT} is unset)</td>
+ * <td>AtomPub, Browser, Web Services (CXF / WebSphere)</td>
+ * <td>time in milliseconds</td>
+ * <td>no</td>
+ * <td>JVM default (Apache invoker defaults connection-lease wait to 60s)</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #READ_TIMEOUT}</td>
+ * <td>HTTP read timeout</td>
+ * <td>AtomPub, Browser, Web Services (CXF / WebSphere); also JDK/OkHttp
+ * invokers</td>
  * <td>time in milliseconds</td>
  * <td>no</td>
  * <td>JVM default</td>
  * </tr>
  * <tr>
- * <td>{@link #READ_TIMEOUT}</td>
- * <td>HTTP read timeout</td>
- * <td>AtomPub, Web Services, Browser</td>
+ * <td>{@link #HTTP_CONNECTION_REQUEST_TIMEOUT}</td>
+ * <td>Max wait for a free pooled HTTP connection <b>and</b> for a free
+ * classloader-wide request-body materialization permit (Apache HttpClient
+ * 5)</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
  * <td>time in milliseconds</td>
  * <td>no</td>
- * <td>JVM default</td>
+ * <td>60000</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_MAX_CONNECTIONS}</td>
+ * <td>Max total pooled HTTP connections (Apache HttpClient 5)</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>positive integer</td>
+ * <td>no</td>
+ * <td>200</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_MAX_CONNECTIONS_PER_HOST}</td>
+ * <td>Max pooled HTTP connections per route (Apache HttpClient 5)</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>positive integer</td>
+ * <td>no</td>
+ * <td>100</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_RESPONSE_BUFFER_LIMIT}</td>
+ * <td>Eagerly buffer response bodies up to this size and release the
+ * connection immediately (Apache HttpClient 5). Larger bodies stream.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>size in bytes</td>
+ * <td>no</td>
+ * <td>1048576 (1 MiB)</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_REQUEST_BODY_MODE}</td>
+ * <td>How Apache HttpClient 5 sends request bodies:
+ * {@code auto} (default) and {@code stream} write once to the wire (known
+ * length via {@code StreamableOutput}, otherwise chunked; gzip applied
+ * on the fly); {@code materialize} buffers to heap/disk for a known
+ * Content-Length and classloader-wide spool limits.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>{@code auto} | {@code stream} | {@code materialize}</td>
+ * <td>no</td>
+ * <td>{@code auto}</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_REQUEST_MEMORY_LIMIT}</td>
+ * <td>Max request body bytes kept in heap before spilling to a temp file
+ * when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize} (ignored for
+ * {@code auto}/{@code stream}). Preserves Content-Length without loading
+ * large uploads entirely into memory.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>size in bytes</td>
+ * <td>no</td>
+ * <td>1048576 (1 MiB)</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_TEMP_DIR}</td>
+ * <td>Directory for request-body temp files when spooling
+ * (Apache HttpClient 5)</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>directory path</td>
+ * <td>no</td>
+ * <td>JVM default temp directory</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_REQUEST_SPOOL_MAX_SIZE}</td>
+ * <td>Max size of a single materialized request body (heap and/or disk)
+ * (Apache HttpClient 5)</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>size in bytes</td>
+ * <td>no</td>
+ * <td>5368709120 (5 GiB)</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT}</td>
+ * <td>Max concurrent request-body materializations (heap and/or disk)
+ * classloader-wide (Apache HttpClient 5). The concurrency permit is held only
+ * while the body is being buffered; after materialization the permit is
+ * released and only the byte budget remains charged through HTTP send /
+ * cleanup. Locked by the first body materialization; later sessions with a
+ * different value are rejected. Not a multi-webapp JVM/host limit unless
+ * OpenCMIS is on a shared classloader.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>positive integer</td>
+ * <td>no</td>
+ * <td>32</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES}</td>
+ * <td>Max total bytes across all active materialized request bodies (heap
+ * and/or disk) classloader-wide (Apache HttpClient 5). When the budget is
+ * exhausted, new bodies wait up to {@link #HTTP_CONNECTION_REQUEST_TIMEOUT}
+ * for active bodies to release bytes (including deferred reclaim of
+ * undeleted spill temps) before failing; a body that alone exceeds the
+ * budget fails immediately. Locked together with
+ * {@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT} on first materialization; later
+ * sessions with a different value are rejected. Unused when
+ * {@link #HTTP_REQUEST_BODY_MODE} is {@code auto} or {@code stream}.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>size in bytes</td>
+ * <td>no</td>
+ * <td>21474836480 (20 GiB)</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_FOLLOW_REDIRECTS}</td>
+ * <td>Whether Apache HttpClient 5 / OkHttp follow redirects. Default
+ * {@code false}. Does not affect JDK {@code DefaultHttpInvoker}.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker} /
+ * {@code OkHttpHttpInvoker}</td>
+ * <td>{@code true} / {@code false}</td>
+ * <td>no</td>
+ * <td>{@code false}</td>
  * </tr>
  * <tr>
  * <td colspan="6"><b>Cache settings</b></td>
@@ -724,6 +841,105 @@ public final class SessionParameter {
 
     public static final String CONNECT_TIMEOUT = "org.apache.chemistry.opencmis.binding.connecttimeout";
     public static final String READ_TIMEOUT = "org.apache.chemistry.opencmis.binding.readtimeout";
+
+    /**
+     * Apache HttpClient 5: max milliseconds to wait for a free pooled connection
+     * and for a free classloader-wide request-body materialization permit.
+     */
+    public static final String HTTP_CONNECTION_REQUEST_TIMEOUT = "org.apache.chemistry.opencmis.binding.http.connectionrequesttimeout";
+
+    /**
+     * Apache HttpClient 5: max total connections in the pool.
+     */
+    public static final String HTTP_MAX_CONNECTIONS = "org.apache.chemistry.opencmis.binding.http.maxconnections";
+
+    /**
+     * Apache HttpClient 5: max connections per route (host).
+     */
+    public static final String HTTP_MAX_CONNECTIONS_PER_HOST = "org.apache.chemistry.opencmis.binding.http.maxconnectionsperhost";
+
+    /**
+     * Apache HttpClient 5: eagerly buffer response bodies up to this many bytes
+     * so pooled connections are released immediately. Larger responses stream.
+     */
+    public static final String HTTP_RESPONSE_BUFFER_LIMIT = "org.apache.chemistry.opencmis.binding.http.responsebufferlimit";
+
+    /**
+     * Apache HttpClient 5: request body send mode.
+     * <ul>
+     * <li>{@code auto} (default) — stream to the wire (known length via
+     * {@code StreamableOutput} uses {@code Content-Length}; otherwise chunked
+     * {@code writeTo}), matching JDK {@code DefaultHttpInvoker} for large ECM
+     * uploads. Same wire behaviour as {@code stream}</li>
+     * <li>{@code stream} — always stream (never spool)</li>
+     * <li>{@code materialize} — always buffer to heap/disk for Content-Length
+     * and classloader-wide spool limits (use when a proxy/server requires
+     * Content-Length or when spool back-pressure is desired)</li>
+     * </ul>
+     */
+    public static final String HTTP_REQUEST_BODY_MODE = "org.apache.chemistry.opencmis.binding.http.requestbodymode";
+
+    /**
+     * Value for {@link #HTTP_REQUEST_BODY_MODE}: stream to the wire (default;
+     * same wire behaviour as {@link #HTTP_REQUEST_BODY_MODE_STREAM}).
+     */
+    public static final String HTTP_REQUEST_BODY_MODE_AUTO = "auto";
+
+    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: always stream (never spool). */
+    public static final String HTTP_REQUEST_BODY_MODE_STREAM = "stream";
+
+    /**
+     * Value for {@link #HTTP_REQUEST_BODY_MODE}: always buffer to heap/disk
+     * (enables classloader-wide spool limits).
+     */
+    public static final String HTTP_REQUEST_BODY_MODE_MATERIALIZE = "materialize";
+
+    /**
+     * Apache HttpClient 5: max request body bytes kept in heap before spilling
+     * to a temporary file when {@link #HTTP_REQUEST_BODY_MODE} is
+     * {@code materialize} (preserves Content-Length for large uploads).
+     * Ignored for {@code auto}/{@code stream}.
+     */
+    public static final String HTTP_REQUEST_MEMORY_LIMIT = "org.apache.chemistry.opencmis.binding.http.requestmemorylimit";
+
+    /**
+     * Apache HttpClient 5: directory for request-body temp files when
+     * {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
+     */
+    public static final String HTTP_TEMP_DIR = "org.apache.chemistry.opencmis.binding.http.tempdir";
+
+    /**
+     * Apache HttpClient 5: max size of a single materialized request body
+     * (heap and/or disk). Applies only when
+     * {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
+     */
+    public static final String HTTP_REQUEST_SPOOL_MAX_SIZE = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxsize";
+
+    /**
+     * Apache HttpClient 5: max concurrent request-body materializations
+     * (heap and/or disk; classloader-wide; locked on first materialization).
+     * Applies only when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
+     */
+    public static final String HTTP_REQUEST_SPOOL_MAX_CONCURRENT = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxconcurrent";
+
+    /**
+     * Apache HttpClient 5: max total bytes across all active materialized
+     * request bodies (heap and/or disk; classloader-wide; locked with
+     * {@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT} on first materialization).
+     * When exhausted, new bodies wait up to
+     * {@link #HTTP_CONNECTION_REQUEST_TIMEOUT} for budget (including deferred
+     * reclaim of undeleted spill temps) instead of failing immediately.
+     * Applies only when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
+     */
+    public static final String HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxtotalbytes";
+
+    /**
+     * Whether Apache HttpClient 5 / OkHttp follow HTTP redirects. Default
+     * {@code false} (safer against unexpected {@code Location} targets). Set
+     * {@code true} only when the repository or proxy is trusted to redirect.
+     * Does not affect {@code DefaultHttpInvoker} (JDK redirect policy).
+     */
+    public static final String HTTP_FOLLOW_REDIRECTS = "org.apache.chemistry.opencmis.binding.http.followredirects";
 
     public static final String PROXY_USER = "org.apache.chemistry.opencmis.binding.proxyuser";
     public static final String PROXY_PASSWORD = "org.apache.chemistry.opencmis.binding.proxypassword";

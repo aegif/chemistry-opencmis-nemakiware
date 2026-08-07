@@ -18,12 +18,12 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 
 import org.apache.chemistry.opencmis.server.shared.CappedInputStream;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CappedInputStreamTest {
 

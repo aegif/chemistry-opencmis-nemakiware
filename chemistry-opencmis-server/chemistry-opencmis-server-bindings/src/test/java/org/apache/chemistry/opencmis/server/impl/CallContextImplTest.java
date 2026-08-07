@@ -18,12 +18,12 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.chemistry.opencmis.commons.enums.CmisVersion;
 import org.apache.chemistry.opencmis.commons.server.CallContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CallContextImplTest {
 

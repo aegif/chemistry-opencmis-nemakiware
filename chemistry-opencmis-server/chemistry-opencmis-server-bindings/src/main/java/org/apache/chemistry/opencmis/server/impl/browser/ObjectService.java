@@ -44,8 +44,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.AllowableActions;
@@ -767,8 +767,18 @@ public class ObjectService {
                 return;
             }
 
-            if (content == null || content.getStream() == null) {
+            // CMIS 1.1 Standard: ContentStream with length=-1 indicates unknown length, not null content
+            if (content == null) {
                 throw new CmisRuntimeException("Content stream is null!");
+            }
+            
+            // Check if stream is actually null (not just unknown length)
+            if (content.getStream() == null) {
+                // Additional check: Only throw if ContentStream properties indicate missing content
+                // Allow content with unknown length (-1) as per CMIS 1.1 specification
+                if (content.getBigLength() == null && content.getLength() == 0) {
+                    throw new CmisRuntimeException("Content stream is null!");
+                }
             }
 
             // set HTTP headers, if requested by the server implementation

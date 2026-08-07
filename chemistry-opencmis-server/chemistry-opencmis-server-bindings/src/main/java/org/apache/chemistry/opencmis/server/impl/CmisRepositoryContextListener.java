@@ -25,9 +25,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 import org.apache.chemistry.opencmis.commons.impl.ClassLoaderUtil;
 import org.apache.chemistry.opencmis.commons.impl.IOUtils;
@@ -122,7 +122,7 @@ public class CmisRepositoryContextListener implements ServletContextListener {
         // create a factory instance
         Object object = null;
         try {
-            object = ClassLoaderUtil.loadClass(className).getDeclaredConstructor().newInstance();
+            object = ClassLoaderUtil.loadClass(className).newInstance();
         } catch (Exception e) {
             LOG.warn("Could not create a services factory instance: {}", e.toString(), e);
             return null;

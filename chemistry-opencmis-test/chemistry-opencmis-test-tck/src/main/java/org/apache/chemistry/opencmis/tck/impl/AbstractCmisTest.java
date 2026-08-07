@@ -30,7 +30,7 @@ import java.util.Set;
 import org.apache.chemistry.opencmis.tck.CmisTest;
 import org.apache.chemistry.opencmis.tck.CmisTestResult;
 import org.apache.chemistry.opencmis.tck.CmisTestResultStatus;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Base class for tests.

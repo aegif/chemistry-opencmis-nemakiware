@@ -24,12 +24,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.chemistry.opencmis.client.bindings.impl.ClientVersion;
@@ -50,11 +54,17 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okio.BufferedSink;
 
+/**
+ * {@link HttpInvoker} backed by OkHttp 5. Recommended on Android; set
+ * {@link SessionParameter#HTTP_INVOKER_CLASS} explicitly. Follows redirects
+ * only when {@link SessionParameter#HTTP_FOLLOW_REDIRECTS} is {@code true}
+ * (default {@code false}).
+ */
 public class OkHttpHttpInvoker implements HttpInvoker {
 
     private static final Logger LOG = LoggerFactory.getLogger(OkHttpHttpInvoker.class);
 
-    protected static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.OkHttpHttpInvoker.httpClient";
+    public static final String HTTP_CLIENT = "org.apache.chemistry.opencmis.client.bindings.spi.http.OkHttpHttpInvoker.httpClient";
 
     public OkHttpHttpInvoker() {
     }
@@ -151,7 +161,7 @@ public class OkHttpHttpInvoker implements HttpInvoker {
             } else if ("DELETE".equals(method)) {
                 requestBuilder.delete();
             } else {
-                throw new CmisRuntimeException("Invalid HTTP method!");
+                throw new CmisRuntimeException("Unsupported HTTP method: " + method);
             }
 
             // set content type
@@ -263,9 +273,13 @@ public class OkHttpHttpInvoker implements HttpInvoker {
      * 
      * @return the builder
      */
-    @SuppressWarnings("deprecation")
     protected OkHttpClient.Builder createClientBuilder(BindingSession session) {
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+
+        // Default off: avoid following redirects to unexpected hosts.
+        boolean followRedirects = session.get(SessionParameter.HTTP_FOLLOW_REDIRECTS, false);
+        clientBuilder.followRedirects(followRedirects);
+        clientBuilder.followSslRedirects(followRedirects);
 
         // timeouts
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
@@ -289,10 +303,10 @@ public class OkHttpHttpInvoker implements HttpInvoker {
                 }
 
                 if (tm == null) {
-                    clientBuilder.sslSocketFactory(sf);
-                } else {
-                    clientBuilder.sslSocketFactory(sf, tm);
+                    tm = systemDefaultTrustManager();
                 }
+
+                clientBuilder.sslSocketFactory(sf, tm);
             }
 
             HostnameVerifier hv = authProvider.getHostnameVerifier();
@@ -302,5 +316,21 @@ public class OkHttpHttpInvoker implements HttpInvoker {
         }
 
         return clientBuilder;
+    }
+
+    private static X509TrustManager systemDefaultTrustManager() {
+        try {
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init((KeyStore) null);
+            for (TrustManager trustManager : trustManagerFactory.getTrustManagers()) {
+                if (trustManager instanceof X509TrustManager) {
+                    return (X509TrustManager) trustManager;
+                }
+            }
+            throw new IllegalStateException("No X509TrustManager found in default TrustManagerFactory");
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Unable to resolve system default X509TrustManager", e);
+        }
     }
 }

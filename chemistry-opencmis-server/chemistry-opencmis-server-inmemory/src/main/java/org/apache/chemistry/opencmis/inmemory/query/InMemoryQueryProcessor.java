@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.antlr.runtime.tree.Tree;
+import org.apache.chemistry.opencmis.server.support.query.CmisTree;
 import org.apache.chemistry.opencmis.commons.data.ObjectData;
 import org.apache.chemistry.opencmis.commons.data.ObjectList;
 import org.apache.chemistry.opencmis.commons.data.PropertyData;
@@ -83,7 +83,7 @@ public class InMemoryQueryProcessor {
 
     private List<StoredObject> matches = new ArrayList<StoredObject>();
     private QueryObject queryObj;
-    private Tree whereTree;
+    private CmisTree whereTree;
     private ObjectStoreImpl objStore;
     private List<TypeDefinition> secondaryTypeIds;
     private CallContext callContext;
@@ -324,7 +324,7 @@ public class InMemoryQueryProcessor {
         }
     }
 
-    private void evalWhereTree(Tree node, String user, StoredObject so) {
+    private void evalWhereTree(CmisTree node, String user, StoredObject so) {
         boolean match = true;
         if (null != node) {
             match = evalWhereNode(so, user, node);
@@ -339,7 +339,7 @@ public class InMemoryQueryProcessor {
      * does. We do here our own walking mechanism so that we can pass additional
      * parameters and define the return types.
      */
-    private boolean evalWhereNode(StoredObject so, String user, Tree node) {
+    private boolean evalWhereNode(StoredObject so, String user, CmisTree node) {
         return new InMemoryWhereClauseWalker(so, user).walkPredicate(node);
     }
 
@@ -354,63 +354,63 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkNot(Tree opNode, Tree node) {
+        public Boolean walkNot(CmisTree opNode, CmisTree node) {
             boolean hasMatched = walkPredicate(node);
             return !hasMatched;
         }
 
         @Override
-        public Boolean walkAnd(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             boolean matches1 = walkPredicate(leftNode);
             boolean matches2 = walkPredicate(rightNode);
             return matches1 && matches2;
         }
 
         @Override
-        public Boolean walkOr(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             boolean matches1 = walkPredicate(leftNode);
             boolean matches2 = walkPredicate(rightNode);
             return matches1 || matches2;
         }
 
         @Override
-        public Boolean walkEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             Integer cmp = compareTo(leftNode, rightNode);
             return cmp == null ? false : cmp == 0;
         }
 
         @Override
-        public Boolean walkNotEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkNotEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             Integer cmp = compareTo(leftNode, rightNode);
             return cmp == null ? false : cmp != 0;
         }
 
         @Override
-        public Boolean walkGreaterThan(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkGreaterThan(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             Integer cmp = compareTo(leftNode, rightNode);
             return cmp == null ? false : cmp > 0;
         }
 
         @Override
-        public Boolean walkGreaterOrEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkGreaterOrEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             Integer cmp = compareTo(leftNode, rightNode);
             return cmp == null ? false : cmp >= 0;
         }
 
         @Override
-        public Boolean walkLessThan(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkLessThan(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             Integer cmp = compareTo(leftNode, rightNode);
             return cmp == null ? false : cmp < 0;
         }
 
         @Override
-        public Boolean walkLessOrEquals(Tree opNode, Tree leftNode, Tree rightNode) {
+        public Boolean walkLessOrEquals(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
             Integer cmp = compareTo(leftNode, rightNode);
             return cmp == null ? false : cmp <= 0;
         }
 
         @Override
-        public Boolean walkIn(Tree opNode, Tree colNode, Tree listNode) {
+        public Boolean walkIn(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
             ColumnReference colRef = getColumnReference(colNode);
             PropertyDefinition<?> pd = colRef.getPropertyDefinition();
             List<Object> literals = onLiteralList(listNode);
@@ -428,7 +428,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkNotIn(Tree opNode, Tree colNode, Tree listNode) {
+        public Boolean walkNotIn(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
             // Note just return !walkIn(node, colNode, listNode) is wrong,
             // because
             // then it evaluates to true for null values (not set properties).
@@ -447,7 +447,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkInAny(Tree opNode, Tree colNode, Tree listNode) {
+        public Boolean walkInAny(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
             ColumnReference colRef = getColumnReference(colNode);
             PropertyDefinition<?> pd = colRef.getPropertyDefinition();
             PropertyData<?> lVal = so.getProperties().get(colRef.getPropertyId());
@@ -469,7 +469,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkNotInAny(Tree opNode, Tree colNode, Tree listNode) {
+        public Boolean walkNotInAny(CmisTree opNode, CmisTree colNode, CmisTree listNode) {
             // Note just return !walkNotInAny(node, colNode, listNode) is
             // wrong, because
             // then it evaluates to true for null values (not set properties).
@@ -494,7 +494,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkEqAny(Tree opNode, Tree literalNode, Tree colNode) {
+        public Boolean walkEqAny(CmisTree opNode, CmisTree literalNode, CmisTree colNode) {
             ColumnReference colRef = getColumnReference(colNode);
             PropertyDefinition<?> pd = colRef.getPropertyDefinition();
             PropertyData<?> lVal = so.getProperties().get(colRef.getPropertyId());
@@ -510,7 +510,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkIsNull(Tree opNode, Tree colNode) {
+        public Boolean walkIsNull(CmisTree opNode, CmisTree colNode) {
             ColumnReference colRef = getColumnReference(colNode);
             PropertyDefinition<?> pd = colRef.getPropertyDefinition();
             boolean cmis11 = callContext.getCmisVersion() != CmisVersion.CMIS_1_0;
@@ -519,7 +519,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkIsNotNull(Tree opNode, Tree colNode) {
+        public Boolean walkIsNotNull(CmisTree opNode, CmisTree colNode) {
             ColumnReference colRef = getColumnReference(colNode);
             PropertyDefinition<?> pd = colRef.getPropertyDefinition();
             boolean cmis11 = callContext.getCmisVersion() != CmisVersion.CMIS_1_0;
@@ -528,7 +528,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkLike(Tree opNode, Tree colNode, Tree stringNode) {
+        public Boolean walkLike(CmisTree opNode, CmisTree colNode, CmisTree stringNode) {
             Object rVal = walkExpr(stringNode);
             if (!(rVal instanceof String)) {
                 throw new IllegalStateException("LIKE operator requires String literal on right hand side.");
@@ -560,12 +560,12 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkNotLike(Tree opNode, Tree colNode, Tree stringNode) {
+        public Boolean walkNotLike(CmisTree opNode, CmisTree colNode, CmisTree stringNode) {
             return !walkLike(opNode, colNode, stringNode);
         }
 
         @Override
-        public Boolean walkInFolder(Tree opNode, Tree qualNode, Tree paramNode) {
+        public Boolean walkInFolder(CmisTree opNode, CmisTree qualNode, CmisTree paramNode) {
             if (null != qualNode) {
                 getTableReference(qualNode);
                 // just for error checking we do not evaluate this, there is
@@ -586,7 +586,7 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        public Boolean walkInTree(Tree opNode, Tree qualNode, Tree paramNode) {
+        public Boolean walkInTree(CmisTree opNode, CmisTree qualNode, CmisTree paramNode) {
             if (null != qualNode) {
                 getTableReference(qualNode);
                 // just for error checking we do not evaluate this, there is
@@ -606,7 +606,7 @@ public class InMemoryQueryProcessor {
             }
         }
 
-        protected Integer compareTo(Tree leftChild, Tree rightChild) {
+        protected Integer compareTo(CmisTree leftChild, CmisTree rightChild) {
             Object rVal = walkExpr(rightChild);
 
             ColumnReference colRef = getColumnReference(leftChild);
@@ -624,14 +624,14 @@ public class InMemoryQueryProcessor {
         }
 
         @SuppressWarnings("unchecked")
-        public List<Object> onLiteralList(Tree node) {
+        public List<Object> onLiteralList(CmisTree node) {
             return (List<Object>) walkExpr(node);
         }
 
         @Override
-        protected Boolean walkTextAnd(Tree node) {
-            List<Tree> terms = getChildrenAsList(node);
-            for (Tree term : terms) {
+        protected Boolean walkTextAnd(CmisTree node) {
+            List<CmisTree> terms = getChildrenAsList(node);
+            for (CmisTree term : terms) {
                 Boolean foundOnce = walkSearchExpr(term);
                 if (foundOnce == null || !foundOnce) {
                     return false;
@@ -641,9 +641,9 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        protected Boolean walkTextOr(Tree node) {
-            List<Tree> terms = getChildrenAsList(node);
-            for (Tree term : terms) {
+        protected Boolean walkTextOr(CmisTree node) {
+            List<CmisTree> terms = getChildrenAsList(node);
+            for (CmisTree term : terms) {
                 Boolean foundOnce = walkSearchExpr(term);
                 if (foundOnce != null && foundOnce) {
                     return true;
@@ -653,25 +653,25 @@ public class InMemoryQueryProcessor {
         }
 
         @Override
-        protected Boolean walkTextMinus(Tree node) {
+        protected Boolean walkTextMinus(CmisTree node) {
             return !findText(node.getChild(0).getText());
         }
 
         @Override
-        protected Boolean walkTextWord(Tree node) {
+        protected Boolean walkTextWord(CmisTree node) {
             return findText(node.getText());
         }
 
         @Override
-        protected Boolean walkTextPhrase(Tree node) {
+        protected Boolean walkTextPhrase(CmisTree node) {
             String phrase = node.getText();
             return findText(phrase.substring(1, phrase.length() - 1));
         }
 
-        private List<Tree> getChildrenAsList(Tree node) {
-            List<Tree> res = new ArrayList<Tree>(node.getChildCount());
+        private List<CmisTree> getChildrenAsList(CmisTree node) {
+            List<CmisTree> res = new ArrayList<CmisTree>(node.getChildCount());
             for (int i = 0; i < node.getChildCount(); i++) {
-                Tree childNnode = node.getChild(i);
+                CmisTree childNnode = node.getChild(i);
                 res.add(childNnode);
             }
             return res;
@@ -792,7 +792,7 @@ public class InMemoryQueryProcessor {
         return 0;
     }
 
-    private ColumnReference getColumnReference(Tree columnNode) {
+    private ColumnReference getColumnReference(CmisTree columnNode) {
         CmisSelector sel = queryObj.getColumnReference(columnNode.getTokenStartIndex());
         if (null == sel) {
             throw new IllegalStateException("Unknown property query name " + columnNode.getChild(0));
@@ -803,7 +803,7 @@ public class InMemoryQueryProcessor {
         }
     }
 
-    private String getTableReference(Tree tableNode) {
+    private String getTableReference(CmisTree tableNode) {
         String typeQueryName = queryObj.getTypeQueryName(tableNode.getText());
         if (null == typeQueryName) {
             throw new IllegalStateException("Inavlid type in IN_FOLDER() or IN_TREE(), must be in FROM list: "

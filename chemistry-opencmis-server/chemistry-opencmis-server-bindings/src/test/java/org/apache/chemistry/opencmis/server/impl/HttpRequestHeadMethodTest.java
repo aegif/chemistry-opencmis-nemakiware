@@ -18,7 +18,7 @@
  */
 package org.apache.chemistry.opencmis.server.impl;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,14 +30,13 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 
-import javax.servlet.Servlet;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.chemistry.opencmis.commons.data.CacheHeaderContentStream;
 import org.apache.chemistry.opencmis.commons.server.CallContext;
@@ -47,8 +46,9 @@ import org.apache.chemistry.opencmis.server.impl.atompub.AbstractAtomPubServiceC
 import org.apache.chemistry.opencmis.server.impl.atompub.CmisAtomPubServlet;
 import org.apache.chemistry.opencmis.server.impl.browser.CmisBrowserBindingServlet;
 import org.apache.chemistry.opencmis.server.shared.Dispatcher;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -79,16 +79,25 @@ public class HttpRequestHeadMethodTest {
     @Mock
     private ServletContext context;
 
-    @Before
+    private AutoCloseable mocks;
+
+    @BeforeEach
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         when(this.request.getScheme()).thenReturn(BACKEND_SERVER_PROTO);
         when(this.request.getServerName()).thenReturn(BACKEND_SERVER_NAME);
         when(this.request.getServerPort()).thenReturn(BACKEND_SERVER_PORT);
         when(this.request.getContextPath()).thenReturn(CONTEXT_PATH);
         when(this.config.getServletContext()).thenReturn(context);
         when(this.context.getAttribute(CmisRepositoryContextListener.SERVICES_FACTORY)).thenReturn(cmisServiceFactory);
-        when(cmisServiceFactory.getService((CallContext) any())).thenReturn(cmisService);
+        when(cmisServiceFactory.getService(any(CallContext.class))).thenReturn(cmisService);
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
     }
 
     @Test
@@ -160,7 +169,8 @@ public class HttpRequestHeadMethodTest {
         }
 
         @Override
-        public void setWriteListener(WriteListener writeListener) {
+        public void setWriteListener(jakarta.servlet.WriteListener writeListener) {
+            // Not implemented for test stub
         }
     }
 }

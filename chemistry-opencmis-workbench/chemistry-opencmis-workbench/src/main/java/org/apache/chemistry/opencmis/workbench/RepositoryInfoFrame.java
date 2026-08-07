@@ -22,7 +22,6 @@ import static org.apache.chemistry.opencmis.commons.impl.CollectionsHelper.isNot
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Toolkit;
@@ -58,6 +57,7 @@ import org.apache.chemistry.opencmis.workbench.icons.ExtensionIcon;
 import org.apache.chemistry.opencmis.workbench.model.ClientModel;
 import org.apache.chemistry.opencmis.workbench.swing.ExtensionsTree;
 import org.apache.chemistry.opencmis.workbench.swing.InfoPanel;
+import org.apache.chemistry.opencmis.workbench.worker.WorkbenchWorker;
 
 public class RepositoryInfoFrame extends JFrame {
 
@@ -104,21 +104,52 @@ public class RepositoryInfoFrame extends JFrame {
         reloadButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+                new WorkbenchWorker<RepositoryInfo>(RepositoryInfoFrame.this) {
+                    @Override
+                    protected String getTitle() {
+                        return "Reload Repository Info";
+                    }
 
-                    Session session = model.getClientSession().getSession();
-                    String repId = session.getRepositoryInfo().getId();
-                    RepositoryInfo repInfo = session.getBinding().getRepositoryService().getRepositoryInfo(repId, null);
+                    @Override
+                    protected String getMessage() {
+                        return "<html>Loading repository information...";
+                    }
 
-                    remove(infoPanel);
-                    infoPanel = new JScrollPane(new RepositoryInfoPanel(model, repInfo, System.currentTimeMillis()));
-                    add(infoPanel, BorderLayout.CENTER);
+                    @Override
+                    protected boolean hasDialog() {
+                        return true;
+                    }
 
-                    validate();
-                } finally {
-                    setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-                }
+                    @Override
+                    protected RepositoryInfo doInBackground() throws Exception {
+                        Session session = model.getClientSession().getSession();
+                        String repId = session.getRepositoryInfo().getId();
+                        return session.getBinding().getRepositoryService().getRepositoryInfo(repId, null);
+                    }
+
+                    @Override
+                    protected void finializeTask() {
+                    }
+
+                    @Override
+                    protected void done() {
+                        super.done();
+                        if (isCancelled()) {
+                            return;
+                        }
+                        try {
+                            RepositoryInfo repInfo = get();
+                            remove(infoPanel);
+                            infoPanel = new JScrollPane(
+                                    new RepositoryInfoPanel(model, repInfo, System.currentTimeMillis()));
+                            add(infoPanel, BorderLayout.CENTER);
+                            validate();
+                            repaint();
+                        } catch (Exception ex) {
+                            // Errors are already reported by WorkbenchWorker.done().
+                        }
+                    }
+                }.executeTask();
             }
         });
         inputPanel.add(reloadButton, BorderLayout.LINE_END);
@@ -363,11 +394,11 @@ public class RepositoryInfoFrame extends JFrame {
 
             regenerateGUI();
         }
-        
+
         private JScrollPane createScrollePane(Component comp) {
             JScrollPane pane = new JScrollPane(comp);
             pane.setPreferredSize(new Dimension(pane.getPreferredSize().width, WorkbenchScale.scaleInt(200)));
-            
+
             return pane;
         }
 

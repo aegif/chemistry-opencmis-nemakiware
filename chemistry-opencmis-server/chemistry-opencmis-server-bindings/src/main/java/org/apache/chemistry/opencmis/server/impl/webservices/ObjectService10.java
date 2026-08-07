@@ -20,10 +20,10 @@ package org.apache.chemistry.opencmis.server.impl.webservices;
 
 import java.math.BigInteger;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.soap.MTOM;
+import jakarta.jws.WebMethod;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.impl.jaxb.CmisAccessControlListType;
 import org.apache.chemistry.opencmis.commons.impl.jaxb.CmisBulkUpdateType;
@@ -46,7 +46,7 @@ public class ObjectService10 extends ObjectService implements ObjectServicePort1
     @WebMethod(exclude = true)
     public void createItem(String repositoryId, CmisPropertiesType properties, String folderId,
             CmisAccessControlListType addACEs, CmisAccessControlListType removeACEs,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisFaultType fault = new CmisFaultType();
         fault.setCode(BigInteger.ZERO);
         fault.setMessage("This is a CMIS 1.0 endpoint.");
@@ -58,7 +58,7 @@ public class ObjectService10 extends ObjectService implements ObjectServicePort1
     @Override
     @WebMethod(exclude = true)
     public void bulkUpdateProperties(String repositoryId, CmisBulkUpdateType bulkUpdateData,
-            Holder<CmisExtensionType> extension, Holder<CmisObjectIdAndChangeTokenType> objectIdAndChangeToken)
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, jakarta.xml.ws.Holder<CmisObjectIdAndChangeTokenType> objectIdAndChangeToken)
             throws CmisException {
         CmisFaultType fault = new CmisFaultType();
         fault.setCode(BigInteger.ZERO);
@@ -71,7 +71,7 @@ public class ObjectService10 extends ObjectService implements ObjectServicePort1
     @Override
     @WebMethod(exclude = true)
     public void appendContentStream(String repositoryId, Holder<String> objectId, Boolean isLastChunk,
-            Holder<String> changeToken, CmisContentStreamType contentStream, Holder<CmisExtensionType> extension)
+            Holder<String> changeToken, CmisContentStreamType contentStream, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
         CmisFaultType fault = new CmisFaultType();
         fault.setCode(BigInteger.ZERO);

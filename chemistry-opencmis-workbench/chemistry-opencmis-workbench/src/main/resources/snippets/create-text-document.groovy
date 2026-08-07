@@ -17,7 +17,7 @@
  * under the License.
  */
 
-Folder parentFolder = ...  // session.getObjectByPath("/")
+Folder parentFolder = ...
 String name = "document.txt"
 String content = "content"
 

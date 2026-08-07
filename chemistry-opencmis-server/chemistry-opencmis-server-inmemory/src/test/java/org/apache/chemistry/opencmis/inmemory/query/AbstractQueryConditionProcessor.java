@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import org.antlr.runtime.tree.Tree;
+import org.apache.chemistry.opencmis.server.support.query.CmisTree;
 import org.apache.chemistry.opencmis.server.support.query.CalendarHelper;
 import org.apache.chemistry.opencmis.server.support.query.CmisQlStrictLexer;
 import org.apache.chemistry.opencmis.server.support.query.PredicateWalkerBase;
@@ -35,189 +35,189 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
 
     private static final Logger LOG = LoggerFactory.getLogger(ProcessQueryTest.class);
 
-    protected abstract void onStartProcessing(Tree whereNode);
+    protected abstract void onStartProcessing(CmisTree whereNode);
 
     protected abstract void onStopProcessing();
 
     // Compare operators
-    protected void onPreEquals(Tree eqNode, Tree leftNode, Tree rightNode) {
+    protected void onPreEquals(CmisTree eqNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onEquals(Tree eqNode, Tree leftNode, Tree rightNode);
+    protected abstract void onEquals(CmisTree eqNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostEquals(Tree eqNode, Tree leftNode, Tree rightNode) {
+    protected void onPostEquals(CmisTree eqNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected void onPreNotEquals(Tree neNode, Tree leftNode, Tree rightNode) {
+    protected void onPreNotEquals(CmisTree neNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onNotEquals(Tree neNode, Tree leftNode, Tree rightNode);
+    protected abstract void onNotEquals(CmisTree neNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostNotEquals(Tree neNode, Tree leftNode, Tree rightNode) {
+    protected void onPostNotEquals(CmisTree neNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected void onPreGreaterThan(Tree gtNode, Tree leftNode, Tree rightNode) {
+    protected void onPreGreaterThan(CmisTree gtNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onGreaterThan(Tree gtNode, Tree leftNode, Tree rightNode);
+    protected abstract void onGreaterThan(CmisTree gtNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostGreaterThan(Tree gtNode, Tree leftNode, Tree rightNode) {
+    protected void onPostGreaterThan(CmisTree gtNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected void onPreGreaterOrEquals(Tree geNode, Tree leftNode, Tree rightNode) {
+    protected void onPreGreaterOrEquals(CmisTree geNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onGreaterOrEquals(Tree geNode, Tree leftNode, Tree rightNode);
+    protected abstract void onGreaterOrEquals(CmisTree geNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostGreaterOrEquals(Tree geNode, Tree leftNode, Tree rightNode) {
+    protected void onPostGreaterOrEquals(CmisTree geNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected void onPreLessThan(Tree ltNode, Tree leftNode, Tree rightNode) {
+    protected void onPreLessThan(CmisTree ltNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onLessThan(Tree ltNode, Tree leftNode, Tree rightNode);
+    protected abstract void onLessThan(CmisTree ltNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostLessThan(Tree ltNode, Tree leftNode, Tree rightNode) {
+    protected void onPostLessThan(CmisTree ltNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected void onPreLessOrEquals(Tree leqNode, Tree leftNode, Tree rightNode) {
+    protected void onPreLessOrEquals(CmisTree leqNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onLessOrEquals(Tree leqNode, Tree leftNode, Tree rightNode);
+    protected abstract void onLessOrEquals(CmisTree leqNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostLessOrEquals(Tree leqNode, Tree leftNode, Tree rightNode) {
+    protected void onPostLessOrEquals(CmisTree leqNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
     // Boolean operators
-    protected abstract void onNot(Tree opNode, Tree leftNode);
+    protected abstract void onNot(CmisTree opNode, CmisTree leftNode);
 
-    protected void onPostNot(Tree opNode, Tree leftNode) {
+    protected void onPostNot(CmisTree opNode, CmisTree leftNode) {
     }
 
-    protected void onPreAnd(Tree opNode, Tree leftNode, Tree rightNode) {
+    protected void onPreAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onAnd(Tree opNode, Tree leftNode, Tree rightNode);
+    protected abstract void onAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostAnd(Tree opNode, Tree leftNode, Tree rightNode) {
+    protected void onPostAnd(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected void onPreOr(Tree opNode, Tree leftNode, Tree rightNode) {
+    protected void onPreOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
-    protected abstract void onOr(Tree opNode, Tree leftNode, Tree rightNode);
+    protected abstract void onOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode);
 
-    protected void onPostOr(Tree opNode, Tree leftNode, Tree rightNode) {
+    protected void onPostOr(CmisTree opNode, CmisTree leftNode, CmisTree rightNode) {
     }
 
     // Multi-value:
-    protected void onPreIn(Tree node, Tree colNode, Tree listNode) {
+    protected void onPreIn(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected abstract void onIn(Tree node, Tree colNode, Tree listNode);
+    protected abstract void onIn(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    protected void onPostIn(Tree node, Tree colNode, Tree listNode) {
+    protected void onPostIn(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected void onPreNotIn(Tree node, Tree colNode, Tree listNode) {
+    protected void onPreNotIn(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected abstract void onNotIn(Tree node, Tree colNode, Tree listNode);
+    protected abstract void onNotIn(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    protected void onPostNotIn(Tree node, Tree colNode, Tree listNode) {
+    protected void onPostNotIn(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected void onPreInAny(Tree node, Tree colNode, Tree listNode) {
+    protected void onPreInAny(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected abstract void onInAny(Tree node, Tree colNode, Tree listNode);
+    protected abstract void onInAny(CmisTree node, CmisTree colNode, CmisTree listNode);
 
-    protected void onPostInAny(Tree node, Tree colNode, Tree listNode) {
+    protected void onPostInAny(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected void onPreNotInAny(Tree node, Tree colNode, Tree listNode) {
+    protected void onPreNotInAny(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected abstract void onNotInAny(Tree node, Tree literalNode, Tree colNode);
+    protected abstract void onNotInAny(CmisTree node, CmisTree literalNode, CmisTree colNode);
 
-    protected void onPostNotInAny(Tree node, Tree colNode, Tree listNode) {
+    protected void onPostNotInAny(CmisTree node, CmisTree colNode, CmisTree listNode) {
     }
 
-    protected void onPreEqAny(Tree node, Tree literalNode, Tree colNode) {
+    protected void onPreEqAny(CmisTree node, CmisTree literalNode, CmisTree colNode) {
     }
 
-    protected abstract void onEqAny(Tree node, Tree literalNode, Tree colNode);
+    protected abstract void onEqAny(CmisTree node, CmisTree literalNode, CmisTree colNode);
 
-    protected void onPostEqAny(Tree node, Tree literalNode, Tree colNode) {
+    protected void onPostEqAny(CmisTree node, CmisTree literalNode, CmisTree colNode) {
     }
 
     // Null comparisons:
-    protected abstract void onIsNull(Tree nullNode, Tree colNode);
+    protected abstract void onIsNull(CmisTree nullNode, CmisTree colNode);
 
-    protected void onPostIsNull(Tree nullNode, Tree colNode) {
+    protected void onPostIsNull(CmisTree nullNode, CmisTree colNode) {
     }
 
-    protected abstract void onIsNotNull(Tree notNullNode, Tree colNode);
+    protected abstract void onIsNotNull(CmisTree notNullNode, CmisTree colNode);
 
-    protected void onPostIsNotNull(Tree notNullNode, Tree colNode) {
+    protected void onPostIsNotNull(CmisTree notNullNode, CmisTree colNode) {
     }
 
     // String matching:
-    protected void onPreIsLike(Tree node, Tree colNode, Tree stringNode) {
+    protected void onPreIsLike(CmisTree node, CmisTree colNode, CmisTree stringNode) {
     }
 
-    protected abstract void onIsLike(Tree node, Tree colNode, Tree stringNode);
+    protected abstract void onIsLike(CmisTree node, CmisTree colNode, CmisTree stringNode);
 
-    protected void onPostIsLike(Tree node, Tree colNode, Tree stringNode) {
+    protected void onPostIsLike(CmisTree node, CmisTree colNode, CmisTree stringNode) {
     }
 
-    protected void onPreIsNotLike(Tree node, Tree colNode, Tree stringNode) {
+    protected void onPreIsNotLike(CmisTree node, CmisTree colNode, CmisTree stringNode) {
     }
 
-    protected abstract void onIsNotLike(Tree node, Tree colNode, Tree stringNode);
+    protected abstract void onIsNotLike(CmisTree node, CmisTree colNode, CmisTree stringNode);
 
-    protected void onPostIsNotLike(Tree node, Tree colNode, Tree stringNode) {
+    protected void onPostIsNotLike(CmisTree node, CmisTree colNode, CmisTree stringNode) {
     }
 
-    protected abstract void onInFolder(Tree node, Tree colNode, Tree paramNode);
+    protected abstract void onInFolder(CmisTree node, CmisTree colNode, CmisTree paramNode);
 
-    protected void onBetweenInFolder(Tree node, Tree colNode, Tree paramNode) {
+    protected void onBetweenInFolder(CmisTree node, CmisTree colNode, CmisTree paramNode) {
     }
 
-    protected void onPostInFolder(Tree node, Tree colNode, Tree paramNode) {
+    protected void onPostInFolder(CmisTree node, CmisTree colNode, CmisTree paramNode) {
     }
 
-    protected abstract void onInTree(Tree node, Tree colNode, Tree paramNode);
+    protected abstract void onInTree(CmisTree node, CmisTree colNode, CmisTree paramNode);
 
-    protected void onBetweenInTree(Tree node, Tree colNode, Tree paramNode) {
+    protected void onBetweenInTree(CmisTree node, CmisTree colNode, CmisTree paramNode) {
     }
 
-    protected void onPostInTree(Tree node, Tree colNode, Tree paramNode) {
+    protected void onPostInTree(CmisTree node, CmisTree colNode, CmisTree paramNode) {
     }
 
-    protected abstract void onScore(Tree node);
+    protected abstract void onScore(CmisTree node);
 
-    protected abstract void onColNode(Tree node);
+    protected abstract void onColNode(CmisTree node);
 
-    protected void onPreTextAnd(Tree node, List<Tree> conjunctionNodes) {
+    protected void onPreTextAnd(CmisTree node, List<CmisTree> conjunctionNodes) {
     }
 
-    protected abstract void onTextAnd(Tree node, List<Tree> conjunctionNodes, int index);
+    protected abstract void onTextAnd(CmisTree node, List<CmisTree> conjunctionNodes, int index);
 
-    protected void onPostTextAnd(Tree node, List<Tree> conjunctionNodes) {
+    protected void onPostTextAnd(CmisTree node, List<CmisTree> conjunctionNodes) {
     }
 
-    protected void onPreTextOr(Tree node, List<Tree> termNodes) {
+    protected void onPreTextOr(CmisTree node, List<CmisTree> termNodes) {
     }
 
-    protected abstract void onTextOr(Tree node, List<Tree> termNodes, int index);
+    protected abstract void onTextOr(CmisTree node, List<CmisTree> termNodes, int index);
 
-    protected void onPostTextOr(Tree node, List<Tree> termNodes) {
+    protected void onPostTextOr(CmisTree node, List<CmisTree> termNodes) {
     }
 
-    protected abstract void onTextMinus(Tree node, Tree notNode);
+    protected abstract void onTextMinus(CmisTree node, CmisTree notNode);
 
-    protected void onPostTextMinus(Tree node, Tree notNode) {
+    protected void onPostTextMinus(CmisTree node, CmisTree notNode) {
     }
 
     protected abstract void onTextWord(String word);
@@ -226,7 +226,7 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
 
     // Base interface called from query parser
     @Override
-    public Boolean walkPredicate(Tree whereNode) {
+    public Boolean walkPredicate(CmisTree whereNode) {
         if (null != whereNode) {
             onStartProcessing(whereNode);
             evalWhereNode(whereNode);
@@ -238,7 +238,7 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
     // ///////////////////////////////////////////////////////
     // Processing the WHERE clause
 
-    protected void evalWhereNode(Tree node) {
+    protected void evalWhereNode(CmisTree node) {
         // Ensure that we receive only valid tokens and nodes in the where
         // clause:
         LOG.debug("evaluating node: " + node.toString());
@@ -375,8 +375,8 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
 
         // Functions
         case CmisQlStrictLexer.CONTAINS:
-            Tree typeNode = node.getChildCount() == 1 ? null : node.getChild(0);
-            Tree textSearchNode = node.getChildCount() == 1 ? node.getChild(0) : node.getChild(1);
+            CmisTree typeNode = node.getChildCount() == 1 ? null : node.getChild(0);
+            CmisTree textSearchNode = node.getChildCount() == 1 ? node.getChild(0) : node.getChild(1);
 
             onPreContains(node, typeNode, textSearchNode);
             if (node.getChildCount() > 1) {
@@ -434,26 +434,26 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
         }
     }
 
-    protected void onPreContains(Tree node, Tree typeNode, Tree searchExprNode) {
+    protected void onPreContains(CmisTree node, CmisTree typeNode, CmisTree searchExprNode) {
     }
 
-    protected void onContains(Tree node, Tree typeNode, Tree searchExprNode) {
+    protected void onContains(CmisTree node, CmisTree typeNode, CmisTree searchExprNode) {
         evalTextSearchNode(typeNode, searchExprNode);
     }
 
-    protected void onBetweenContains(Tree node, Tree typeNode, Tree searchExprNode) {
+    protected void onBetweenContains(CmisTree node, CmisTree typeNode, CmisTree searchExprNode) {
     }
 
-    protected void evalTextSearchNode(Tree typeNode, Tree node) {
+    protected void evalTextSearchNode(CmisTree typeNode, CmisTree node) {
         // Ensure that we receive only valid tokens and nodes in the where
         // clause:
         LOG.debug("evaluating node: " + node.toString());
         switch (node.getType()) {
         case TextSearchLexer.TEXT_AND:
-            List<Tree> children = getChildrenAsList(node);
+            List<CmisTree> children = getChildrenAsList(node);
             onPreTextAnd(node, children);
             int i = 0;
-            for (Tree child : children) {
+            for (CmisTree child : children) {
                 evalTextSearchNode(typeNode, child);
                 onTextAnd(node, children, i++);
             }
@@ -463,7 +463,7 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
             children = getChildrenAsList(node);
             onPreTextOr(node, children);
             int j = 0;
-            for (Tree child : children) {
+            for (CmisTree child : children) {
                 evalTextSearchNode(typeNode, child);
                 onTextOr(node, children, j++);
             }
@@ -485,7 +485,7 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
 
     // helper functions that are needed by most query tree walkers
 
-    protected Object getLiteral(Tree node) {
+    protected Object getLiteral(CmisTree node) {
         int type = node.getType();
         String text = node.getText();
         switch (type) {
@@ -508,15 +508,15 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
         }
     }
 
-    protected Object onLiteral(Tree node) {
+    protected Object onLiteral(CmisTree node) {
         return getLiteral(node);
     }
 
-    protected String onId(Tree node) {
+    protected String onId(CmisTree node) {
         return node.getText();
     }
 
-    protected String onTextLiteral(Tree node) {
+    protected String onTextLiteral(CmisTree node) {
         int type = node.getType();
         String text = node.getText();
         switch (type) {
@@ -529,19 +529,19 @@ public abstract class AbstractQueryConditionProcessor implements PredicateWalker
         }
     }
 
-    protected List<Object> onLiteralList(Tree node) {
+    protected List<Object> onLiteralList(CmisTree node) {
         List<Object> res = new ArrayList<Object>(node.getChildCount());
         for (int i = 0; i < node.getChildCount(); i++) {
-            Tree literal = node.getChild(i);
+            CmisTree literal = node.getChild(i);
             res.add(getLiteral(literal));
         }
         return res;
     }
 
-    protected List<Tree> getChildrenAsList(Tree node) {
-        List<Tree> res = new ArrayList<Tree>(node.getChildCount());
+    protected List<CmisTree> getChildrenAsList(CmisTree node) {
+        List<CmisTree> res = new ArrayList<CmisTree>(node.getChildCount());
         for (int i = 0; i < node.getChildCount(); i++) {
-            Tree childNnode = node.getChild(i);
+            CmisTree childNnode = node.getChild(i);
             res.add(childNnode);
         }
         return res;

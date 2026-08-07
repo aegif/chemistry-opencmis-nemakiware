@@ -29,11 +29,11 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Resource;
-import javax.jws.WebService;
-import javax.xml.ws.Holder;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.soap.MTOM;
+import jakarta.annotation.Resource;
+import jakarta.jws.WebService;
+import jakarta.xml.ws.Holder;
+import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.soap.MTOM;
 
 import org.apache.chemistry.opencmis.commons.data.AllowableActions;
 import org.apache.chemistry.opencmis.commons.data.BulkUpdateObjectIdAndChangeToken;
@@ -77,7 +77,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
     public void createDocument(String repositoryId, CmisPropertiesType properties, String folderId,
             CmisContentStreamType contentStream, EnumVersioningState versioningState, List<String> policies,
             CmisAccessControlListType addAces, CmisAccessControlListType removeAces,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -114,7 +114,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
     public void createDocumentFromSource(String repositoryId, String sourceId, CmisPropertiesType properties,
             String folderId, EnumVersioningState versioningState, List<String> policies,
             CmisAccessControlListType addAces, CmisAccessControlListType removeAces,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -148,7 +148,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
     @Override
     public void createFolder(String repositoryId, CmisPropertiesType properties, String folderId,
             List<String> policies, CmisAccessControlListType addAces, CmisAccessControlListType removeAces,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -181,7 +181,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
     @Override
     public void createPolicy(String repositoryId, CmisPropertiesType properties, String folderId,
             List<String> policies, CmisAccessControlListType addAces, CmisAccessControlListType removeAces,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -214,7 +214,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
     @Override
     public void createRelationship(String repositoryId, CmisPropertiesType properties, List<String> policies,
             CmisAccessControlListType addAces, CmisAccessControlListType removeAces,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -247,7 +247,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
     @Override
     public void createItem(String repositoryId, CmisPropertiesType properties, String folderId,
             CmisAccessControlListType addAces, CmisAccessControlListType removeAces,
-            Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, Holder<String> objectId) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -279,7 +279,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void deleteContentStream(String repositoryId, Holder<String> objectId, Holder<String> changeToken,
-            Holder<CmisExtensionType> extension) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -310,7 +310,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void deleteObject(String repositoryId, String objectId, Boolean allVersions,
-            Holder<CmisExtensionType> extension) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -536,7 +536,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void moveObject(String repositoryId, Holder<String> objectId, String targetFolderId, String sourceFolderId,
-            Holder<CmisExtensionType> extension) throws CmisException {
+            jakarta.xml.ws.Holder<CmisExtensionType> extension) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -565,7 +565,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void setContentStream(String repositoryId, Holder<String> objectId, Boolean overwriteFlag,
-            Holder<String> changeToken, CmisContentStreamType contentStream, Holder<CmisExtensionType> extension)
+            Holder<String> changeToken, CmisContentStreamType contentStream, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
         CmisService service = null;
         try {
@@ -600,7 +600,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void appendContentStream(String repositoryId, Holder<String> objectId, Boolean isLastChunk,
-            Holder<String> changeToken, CmisContentStreamType contentStream, Holder<CmisExtensionType> extension)
+            Holder<String> changeToken, CmisContentStreamType contentStream, jakarta.xml.ws.Holder<CmisExtensionType> extension)
             throws CmisException {
         CmisService service = null;
         try {
@@ -635,7 +635,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void updateProperties(String repositoryId, Holder<String> objectId, Holder<String> changeToken,
-            CmisPropertiesType properties, Holder<CmisExtensionType> extension) throws CmisException {
+            CmisPropertiesType properties, jakarta.xml.ws.Holder<CmisExtensionType> extension) throws CmisException {
         CmisService service = null;
         try {
             service = getService(wsContext, repositoryId);
@@ -666,7 +666,7 @@ public class ObjectService extends AbstractService implements ObjectServicePort 
 
     @Override
     public void bulkUpdateProperties(String repositoryId, CmisBulkUpdateType bulkUpdateData,
-            Holder<CmisExtensionType> extension, Holder<CmisObjectIdAndChangeTokenType> objectIdAndChangeToken)
+            jakarta.xml.ws.Holder<CmisExtensionType> extension, jakarta.xml.ws.Holder<CmisObjectIdAndChangeTokenType> objectIdAndChangeToken)
             throws CmisException {
         CmisService service = null;
         try {

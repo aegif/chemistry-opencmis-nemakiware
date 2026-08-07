@@ -23,12 +23,12 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.handler.MessageContext;
+import jakarta.xml.ws.WebServiceContext;
+import jakarta.xml.ws.handler.MessageContext;
 
 import org.apache.chemistry.opencmis.commons.enums.CmisVersion;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
@@ -241,7 +241,7 @@ public abstract class AbstractService {
         if (ex != null) {
             if (ex instanceof CmisBaseException) {
                 fault.setCode(((CmisBaseException) ex).getCode());
-                fault.setMessage(XMLUtils.cleanXmlString(ex.getMessage()));
+                fault.setMessage(ex.getMessage());
 
                 if (ex instanceof CmisConstraintException) {
                     fault.setType(EnumServiceException.CONSTRAINT);
@@ -285,11 +285,11 @@ public abstract class AbstractService {
                             root.appendChild(entry);
 
                             Element key = doc.createElement("key");
-                            key.appendChild(doc.createTextNode(XMLUtils.cleanXmlString(e.getKey())));
+                            key.appendChild(doc.createTextNode(e.getKey()));
                             entry.appendChild(key);
 
                             Element value = doc.createElement("value");
-                            value.appendChild(doc.createTextNode(XMLUtils.cleanXmlString(e.getValue())));
+                            value.appendChild(doc.createTextNode(e.getValue()));
                             entry.appendChild(value);
                         }
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-Folder parentFolder = ...  // session.getObjectByPath("/")
+Folder parentFolder = ...
 String name = "new folder"
 
 def properties = [

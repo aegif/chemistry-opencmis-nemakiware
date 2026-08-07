@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>2.0.0-RC2-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -143,13 +143,38 @@
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <version>${log4j.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <profiles>
+        <profile>
+            <!--
+                call mvn test -Dorg.apache.chemistry.opencmis.client.runtime.suite.config.path=myServer.properties to
+                run test using profile parameters
+            -->
+            <activation>
+                <property>
+                    <name>org.apache.chemistry.opencmis.client.runtime.test.config.path</name>
+                </property>
+            </activation>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                            <configuration>
+                                <argLine>-Dorg.apache.chemistry.opencmis.client.runtime.test.config.path=${org.apache.chemistry.opencmis.client.runtime.test.config.path}</argLine>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+
         <!--
             Extending the default -Papache-release profile used *only*
             during releases

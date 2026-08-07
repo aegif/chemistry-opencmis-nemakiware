@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.commons.impl.Constants;
@@ -48,12 +48,12 @@ public final class POSTHttpServletRequestWrapper extends QueryStringHttpServletR
     private BigInteger size;
     private InputStream stream;
 
+    @SuppressWarnings("unchecked")
     public POSTHttpServletRequestWrapper(HttpServletRequest request, TempStoreOutputStreamFactory streamFactory)
             throws IOException {
         super(request);
 
         if (MultipartParser.isMultipartContent(request)) {
-            // multipart processing
             MultipartParser parser = new MultipartParser(request, streamFactory);
             parser.parse();
 
@@ -64,8 +64,11 @@ public final class POSTHttpServletRequestWrapper extends QueryStringHttpServletR
                 stream = parser.getStream();
             }
 
-            for (Map.Entry<String, String[]> e : parser.getFields().entrySet()) {
-                addParameter(e.getKey(), e.getValue());
+            Map<String, String[]> parserFields = parser.getFields();
+            if (parserFields != null) {
+                for (Map.Entry<String, String[]> e : parserFields.entrySet()) {
+                    addParameter(e.getKey(), e.getValue());
+                }
             }
 
             String filenameControl = HttpUtils.getStringParameter(this, Constants.CONTROL_FILENAME);

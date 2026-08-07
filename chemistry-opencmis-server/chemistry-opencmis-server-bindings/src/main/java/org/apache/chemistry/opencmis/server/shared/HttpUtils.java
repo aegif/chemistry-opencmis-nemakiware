@@ -20,7 +20,7 @@ package org.apache.chemistry.opencmis.server.shared;
 
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.commons.impl.IOUtils;
@@ -40,6 +40,7 @@ public final class HttpUtils {
             return null;
         }
 
+        @SuppressWarnings("unchecked")
         Map<String, String[]> parameters = request.getParameterMap();
 
         if (parameters != null) {

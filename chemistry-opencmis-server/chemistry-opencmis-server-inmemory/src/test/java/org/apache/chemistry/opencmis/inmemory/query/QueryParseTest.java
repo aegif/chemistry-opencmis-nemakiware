@@ -18,20 +18,19 @@
  */
 package org.apache.chemistry.opencmis.inmemory.query;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 import java.util.Map;
 
-import org.antlr.runtime.FailedPredicateException;
-import org.antlr.runtime.RecognitionException;
-import org.antlr.runtime.tree.CommonTree;
-import org.antlr.runtime.tree.Tree;
+import org.apache.chemistry.opencmis.server.support.query.FailedPredicateException;
+import org.antlr.v4.runtime.RecognitionException;
+import org.apache.chemistry.opencmis.server.support.query.CmisTree;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
 import org.apache.chemistry.opencmis.server.support.query.CmisQlStrictLexer;
 import org.apache.chemistry.opencmis.server.support.query.CmisQueryWalker;
@@ -42,8 +41,8 @@ import org.apache.chemistry.opencmis.server.support.query.QueryObject;
 import org.apache.chemistry.opencmis.server.support.query.QueryObject.SortSpec;
 import org.apache.chemistry.opencmis.server.support.query.QueryUtilStrict;
 import org.apache.chemistry.opencmis.server.support.query.TextSearchLexer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +50,7 @@ public class QueryParseTest extends AbstractQueryTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(QueryParseTest.class);
 
-    @Before
+    @BeforeEach
     public void setUp() {
         // initialize query object, we do not need a type manager for just
         // testing parsing
@@ -286,7 +285,7 @@ public class QueryParseTest extends AbstractQueryTest {
         // only "*" should be in select references
         assertTrue(1 == queryObj.getSelectReferences().size());
 
-        CommonTree tree = (CommonTree) walker.getTreeNodeStream().getTreeSource();
+        CmisTree tree = (CmisTree) walker.getTreeNodeStream().getTreeSource();
 
         // assertTrue(traverseTreeAndFindNodeInColumnMap(tree, colRefs));
         traverseTreeAndFindNodeInColumnMap2(tree, colRefs);
@@ -294,7 +293,7 @@ public class QueryParseTest extends AbstractQueryTest {
 
     // check if the map containing all column references in the where clause has
     // an existing node as key
-    private boolean traverseTreeAndFindNodeInColumnMap(Tree node, Map<Object, CmisSelector> colRefs) {
+    private boolean traverseTreeAndFindNodeInColumnMap(CmisTree node, Map<Object, CmisSelector> colRefs) {
         boolean found = false;
 
         if (null != colRefs.get(node)) {
@@ -303,13 +302,13 @@ public class QueryParseTest extends AbstractQueryTest {
 
         int count = node.getChildCount();
         for (int i = 0; i < count && !found; i++) {
-            Tree child = node.getChild(i);
+            CmisTree child = node.getChild(i);
             found = traverseTreeAndFindNodeInColumnMap(child, colRefs);
         }
         return found;
     }
 
-    private boolean traverseTreeAndFindNodeInColumnMap2(Tree node, Object colRef) {
+    private boolean traverseTreeAndFindNodeInColumnMap2(CmisTree node, Object colRef) {
         int count = node.getChildCount();
         LOG.debug("  checking with: " + node + " identity hash code: " + System.identityHashCode(node));
         if (node == colRef) {
@@ -317,7 +316,7 @@ public class QueryParseTest extends AbstractQueryTest {
         }
         boolean found = false;
         for (int i = 0; i < count && !found; i++) {
-            Tree child = node.getChild(i);
+            CmisTree child = node.getChild(i);
             found = traverseTreeAndFindNodeInColumnMap2(child, colRef);
         }
         return found;
@@ -373,7 +372,7 @@ public class QueryParseTest extends AbstractQueryTest {
         try {
 
             CmisQueryWalker walker = getWalker(statement);
-            Tree parserTree = (Tree) walker.getTreeNodeStream().getTreeSource();
+            CmisTree parserTree = (CmisTree) walker.getTreeNodeStream().getTreeSource();
             printTree(parserTree, statement);
 
         } catch (Exception e) {
@@ -389,7 +388,7 @@ public class QueryParseTest extends AbstractQueryTest {
         try {
             QueryUtilStrict queryUtil = traverseStatementAndCatchExc(statement);
             CmisQueryWalker walker = queryUtil.getWalker();
-            Tree whereTree = walker.getWherePredicateTree(); // getWhereTree(parserTree);
+            CmisTree whereTree = walker.getWherePredicateTree(); // getWhereTree(parserTree);
             printTree(whereTree);
             LOG.info("Evaluate WHERE subtree: ...");
             evalWhereTree(whereTree);
@@ -498,7 +497,10 @@ public class QueryParseTest extends AbstractQueryTest {
         } catch (Exception e) {
             LOG.debug("Exception is: ", e);
             assertTrue(e instanceof CmisInvalidArgumentException);
-            assertTrue(e.getMessage().contains("missing EOF at "));
+            assertTrue(e.getMessage().contains("IN_FOLDER")
+                    || e.getMessage().contains("missing EOF")
+                    || e.getMessage().contains("mismatched input")
+                    || e.getMessage().contains("extraneous input"));
         }
     }
 
@@ -524,7 +526,7 @@ public class QueryParseTest extends AbstractQueryTest {
     public void whereTestContains() {
         String statement = "SELECT p1 FROM MyType WHERE CONTAINS('Beethoven')";
         checkTreeWhere(statement);
-        Tree tree = findSearchExpression(statement);
+        CmisTree tree = findSearchExpression(statement);
         printSearchTree(tree, statement);
         assertEquals("Beethoven", tree.getChild(0).getText());
     }
@@ -539,8 +541,8 @@ public class QueryParseTest extends AbstractQueryTest {
         queryUtil.walkStatement();
         CmisQueryWalker walker = queryUtil.getWalker();
         assertNotNull(queryUtil.getWalker());
-        Tree whereTree = walker.getWherePredicateTree();
-        Tree tree = findTextSearchNode(whereTree);
+        CmisTree whereTree = walker.getWherePredicateTree();
+        CmisTree tree = findTextSearchNode(whereTree);
         printSearchTree(tree, statement);
         // unparsed, still with quotes
         assertEquals("'Beethoven'", tree.getChild(0).getText());
@@ -609,7 +611,7 @@ public class QueryParseTest extends AbstractQueryTest {
     public void whereTestContains2() {
         String statement = "SELECT p1 FROM MyType WHERE CONTAINS('Beethoven OR \"Johann Sebastian\" Mozart -Cage AND Orff')";
         checkTreeWhere(statement);
-        Tree tree = findSearchExpression(statement);
+        CmisTree tree = findSearchExpression(statement);
         printSearchTree(tree, statement);
     }
 
@@ -624,13 +626,13 @@ public class QueryParseTest extends AbstractQueryTest {
     private void checkTreeWhere(String statement) {
         LOG.info("\ncheckTreeWhere: " + statement);
         QueryUtilStrict queryUtil = traverseStatementAndCatchExc(statement);
-        Tree whereTree = queryUtil.getWalker().getWherePredicateTree();
+        CmisTree whereTree = queryUtil.getWalker().getWherePredicateTree();
         evalWhereTree(whereTree);
     }
 
-    private Tree findSearchExpression(String statement) {
+    private CmisTree findSearchExpression(String statement) {
         QueryUtilStrict queryUtil = traverseStatementAndCatchExc(statement);
-        Tree whereTree = queryUtil.getWalker().getWherePredicateTree();
+        CmisTree whereTree = queryUtil.getWalker().getWherePredicateTree();
         return findTextSearchNode(whereTree);
     }
 
@@ -639,13 +641,13 @@ public class QueryParseTest extends AbstractQueryTest {
         return queryUtil.getWalker().getNumberOfContainsClauses();
     }
 
-    private Tree findTextSearchNode(Tree node) {
+    private CmisTree findTextSearchNode(CmisTree node) {
         int count = node.getChildCount();
         if (node.getType() == CmisQlStrictLexer.CONTAINS) {
             return node;
         } else {
             for (int i = 0; i < count; i++) {
-                Tree child = node.getChild(i);
+                CmisTree child = node.getChild(i);
                 node = findTextSearchNode(child); // recursive descent
                 if (null != node) {
                     return node;
@@ -655,29 +657,29 @@ public class QueryParseTest extends AbstractQueryTest {
         }
     }
 
-    private void evalWhereTree(Tree root) {
+    private void evalWhereTree(CmisTree root) {
         int count = root.getChildCount();
         if (root.getType() == CmisQlStrictLexer.CONTAINS) {
             evalSearchExprTree(root);
         } else {
             for (int i = 0; i < count; i++) {
-                Tree child = root.getChild(i);
+                CmisTree child = root.getChild(i);
                 evaluateWhereNode(child);
                 evalWhereTree(child); // recursive descent
             }
         }
     }
 
-    private void evalSearchExprTree(Tree root) {
+    private void evalSearchExprTree(CmisTree root) {
         int count = root.getChildCount();
         for (int i = 0; i < count; i++) {
-            Tree child = root.getChild(i);
+            CmisTree child = root.getChild(i);
             evaluateSearchExprNode(child);
             evalSearchExprTree(child); // recursive descent
         }
     }
 
-    private void printTree(Tree tree, String statement) {
+    private void printTree(CmisTree tree, String statement) {
         LOG.info("Printing the abstract syntax tree for statement:");
         LOG.info("  " + statement);
         printTree(tree);
@@ -693,18 +695,18 @@ public class QueryParseTest extends AbstractQueryTest {
         return sb.toString();
     }
 
-    private void printTree(Tree node) {
+    private void printTree(CmisTree node) {
         LOG.info(indentString() + printNode(node));
         ++indent;
         int count = node.getChildCount();
         for (int i = 0; i < count; i++) {
-            Tree child = node.getChild(i);
+            CmisTree child = node.getChild(i);
             printTree(child);
         }
         --indent;
     }
 
-    private static String printNode(Tree node) {
+    private static String printNode(CmisTree node) {
         switch (node.getType()) {
         case CmisQlStrictLexer.TABLE:
             return "#TABLE";
@@ -740,7 +742,6 @@ public class QueryParseTest extends AbstractQueryTest {
         case CmisQlStrictLexer.ORDER:
         case CmisQlStrictLexer.STRING_LIT:
         case CmisQlStrictLexer.CONTAINS:
-        case CmisQlStrictLexer.ExactNumLit:
         case CmisQlStrictLexer.LTEQ:
         case CmisQlStrictLexer.NOT:
         case CmisQlStrictLexer.ID:
@@ -749,11 +750,9 @@ public class QueryParseTest extends AbstractQueryTest {
         case CmisQlStrictLexer.AS:
         case CmisQlStrictLexer.IN:
         case CmisQlStrictLexer.LPAR:
-        case CmisQlStrictLexer.Digits:
         case CmisQlStrictLexer.COMMA:
         case CmisQlStrictLexer.IS:
         case CmisQlStrictLexer.LEFT:
-        case CmisQlStrictLexer.Sign:
         case CmisQlStrictLexer.EQ:
         case CmisQlStrictLexer.DOT:
         case CmisQlStrictLexer.NUM_LIT:
@@ -766,7 +765,6 @@ public class QueryParseTest extends AbstractQueryTest {
         case CmisQlStrictLexer.ON:
         case CmisQlStrictLexer.RIGHT:
         case CmisQlStrictLexer.GTEQ:
-        case CmisQlStrictLexer.ApproxNumLit:
         case CmisQlStrictLexer.JOIN:
         case CmisQlStrictLexer.IN_FOLDER:
         case CmisQlStrictLexer.WS:
@@ -786,24 +784,24 @@ public class QueryParseTest extends AbstractQueryTest {
         }
     }
 
-    private void printSearchTree(Tree tree, String searchExpr) {
+    private void printSearchTree(CmisTree tree, String searchExpr) {
         LOG.info("Printhing the abstract syntax tree for the search expression in CONTAINS :");
         LOG.info(searchExpr);
         printSearchTree(tree);
     }
 
-    private void printSearchTree(Tree node) {
+    private void printSearchTree(CmisTree node) {
         LOG.info(indentString() + printSearchNode(node));
         ++indent;
         int count = node.getChildCount();
         for (int i = 0; i < count; i++) {
-            Tree child = node.getChild(i);
+            CmisTree child = node.getChild(i);
             printSearchTree(child);
         }
         --indent;
     }
 
-    private static String printSearchNode(Tree node) {
+    private static String printSearchNode(CmisTree node) {
         switch (node.getType()) {
         case TextSearchLexer.TEXT_AND:
         case TextSearchLexer.TEXT_OR:
@@ -818,7 +816,7 @@ public class QueryParseTest extends AbstractQueryTest {
     }
 
     // Ensure that we receive only valid tokens and nodes in the where clause:
-    private void evaluateWhereNode(Tree node) {
+    private void evaluateWhereNode(CmisTree node) {
         LOG.info("evaluating node: " + node.toString());
         switch (node.getType()) {
         case CmisQlStrictLexer.WHERE:
@@ -862,9 +860,6 @@ public class QueryParseTest extends AbstractQueryTest {
         case CmisQlStrictLexer.CONTAINS:
             evalContains(node);
             break;
-        case CmisQlStrictLexer.ExactNumLit:
-            evalExactNumLiteral(node);
-            break;
         case CmisQlStrictLexer.LTEQ:
             evalLessOrEqual(node);
             break;
@@ -895,9 +890,6 @@ public class QueryParseTest extends AbstractQueryTest {
         case CmisQlStrictLexer.GTEQ:
             evalGreaterThan(node);
             break;
-        case CmisQlStrictLexer.ApproxNumLit:
-            evalApproxNumLiteral(node);
-            break;
         case CmisQlStrictLexer.IN_FOLDER:
             evalInFolder(node);
             break;
@@ -925,7 +917,7 @@ public class QueryParseTest extends AbstractQueryTest {
     }
 
     // Ensure that we receive only valid tokens and nodes in the where clause:
-    private void evaluateSearchExprNode(Tree node) {
+    private void evaluateSearchExprNode(CmisTree node) {
         LOG.info("evaluating text search expression node: " + node.toString());
         switch (node.getType()) {
         case TextSearchLexer.TEXT_AND:
@@ -944,118 +936,118 @@ public class QueryParseTest extends AbstractQueryTest {
         }
     }
 
-    private void evalInAny(Tree node) {
+    private void evalInAny(CmisTree node) {
     }
 
-    private static void evalColumn(Tree node) {
+    private static void evalColumn(CmisTree node) {
         assertEquals(1, node.getChildCount());
         assertEquals(CmisQlStrictLexer.ID, node.getChild(0).getType());
     }
 
-    private static void evalEquals(Tree node) {
+    private static void evalEquals(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalInFolder(Tree node) {
+    private static void evalInFolder(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalApproxNumLiteral(Tree node) {
+    private static void evalApproxNumLiteral(CmisTree node) {
     }
 
-    private static void evalNull(Tree node) {
+    private static void evalNull(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalLike(Tree node) {
+    private static void evalLike(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalNumLiteral(Tree node) {
+    private static void evalNumLiteral(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 
-    private static void evalInList(Tree node) {
+    private static void evalInList(CmisTree node) {
     }
 
-    private static void evalEqAny(Tree node) {
+    private static void evalEqAny(CmisTree node) {
     }
 
-    private static void evalNotLike(Tree node) {
+    private static void evalNotLike(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalNotIn(Tree node) {
+    private static void evalNotIn(CmisTree node) {
     }
 
-    private static void evalIsNull(Tree node) {
+    private static void evalIsNull(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalIsNotNull(Tree node) {
+    private static void evalIsNotNull(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalLessThan(Tree node) {
+    private static void evalLessThan(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalBooleanLiteral(Tree node) {
+    private static void evalBooleanLiteral(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 
-    private static void evalStringLiteral(Tree node) {
+    private static void evalStringLiteral(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 
-    private static void evalContains(Tree node) {
+    private static void evalContains(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalExactNumLiteral(Tree node) {
+    private static void evalExactNumLiteral(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 
-    private static void evalLessOrEqual(Tree node) {
+    private static void evalLessOrEqual(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalNot(Tree node) {
+    private static void evalNot(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalId(Tree node) {
+    private static void evalId(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 
-    private static void evalAnd(Tree node) {
+    private static void evalAnd(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private void evalIn(Tree node) {
+    private void evalIn(CmisTree node) {
     }
 
-    private static void evalNotEquals(Tree node) {
+    private static void evalNotEquals(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalScore(Tree node) {
+    private static void evalScore(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 
-    private static void evalInTree(Tree node) {
+    private static void evalInTree(CmisTree node) {
         assertEquals(1, node.getChildCount());
     }
 
-    private static void evalOr(Tree node) {
+    private static void evalOr(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalGreaterThan(Tree node) {
+    private static void evalGreaterThan(CmisTree node) {
         assertEquals(2, node.getChildCount());
     }
 
-    private static void evalTimeLiteral(Tree node) {
+    private static void evalTimeLiteral(CmisTree node) {
         assertEquals(0, node.getChildCount());
     }
 

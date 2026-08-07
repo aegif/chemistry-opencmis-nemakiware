@@ -20,10 +20,13 @@
  */
 package org.apache.chemistry.opencmis.inmemory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -109,6 +112,7 @@ public class AbstractServiceTest {
         return fTypeCreatorClassName;
     }
 
+    @BeforeEach
     protected void setUp() {
     	setUp(false);
     }
@@ -153,12 +157,14 @@ public class AbstractServiceTest {
     protected void addParameters(Map<String, String> parameters) {
     }
 
+    @AfterEach
     protected void tearDown() {
         LOG.debug("Close local binding.");
         binding.close();
         LOG.debug("Local binding closed.");
     }
 
+    @Test
     public void testDummy() {
         // dummy test to make tools happy that complain if there are no tests
         // available in a test class

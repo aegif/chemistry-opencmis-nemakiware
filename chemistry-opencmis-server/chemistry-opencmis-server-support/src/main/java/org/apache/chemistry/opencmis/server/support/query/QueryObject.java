@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.antlr.runtime.tree.Tree;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.definitions.TypeDefinition;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
@@ -169,7 +168,7 @@ public class QueryObject {
         return selectReferences;
     }
 
-    public void addSelectReference(Tree node, CmisSelector selRef) {
+    public void addSelectReference(CmisTree node, CmisSelector selRef) {
         selectReferences.add(selRef);
         columnReferences.put(node.getTokenStartIndex(), selRef);
     }
@@ -318,7 +317,7 @@ public class QueryObject {
     // ///////////////////////////////////////////////////////
     // JOINS
 
-    public void addJoinReference(Tree node, CmisSelector reference) {
+    public void addJoinReference(CmisTree node, CmisSelector reference) {
         columnReferences.put(node.getTokenStartIndex(), reference);
         joinReferences.add(reference);
     }
@@ -346,7 +345,7 @@ public class QueryObject {
     // ///////////////////////////////////////////////////////
     // WHERE part
 
-    public void addWhereReference(Tree node, CmisSelector reference) {
+    public void addWhereReference(CmisTree node, CmisSelector reference) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("add node to where: {}", System.identityHashCode(node));
         }
@@ -358,7 +357,7 @@ public class QueryObject {
         return Collections.unmodifiableList(whereReferences);
     }
 
-    public void addWhereTypeReference(Tree node, String qualifier) {
+    public void addWhereTypeReference(CmisTree node, String qualifier) {
         if (node != null) {
             typeReferences.put(node.getTokenStartIndex(), qualifier);
         }
@@ -371,7 +370,7 @@ public class QueryObject {
         return Collections.unmodifiableList(sortSpecs);
     }
 
-    public void addSortCriterium(Tree node, ColumnReference colRef, boolean ascending) {
+    public void addSortCriterium(CmisTree node, ColumnReference colRef, boolean ascending) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("addSortCriterium: {} ascending: {}", colRef, ascending);
         }

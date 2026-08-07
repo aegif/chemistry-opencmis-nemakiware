@@ -25,7 +25,7 @@
         <format>tar.gz</format>
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
-    
+
     <files>
         <file>
             <source>README</source>
@@ -35,13 +35,42 @@
             <source>${project.build.directory}/${project.build.finalName}.jar</source>
             <outputDirectory></outputDirectory>
         </file>
+        <!-- Custom LICENSE/NOTICE so CDDL (stax-api) is disclosed in the binary pack. -->
+        <file>
+            <source>src/main/assembly/android-pack-license.txt</source>
+            <outputDirectory></outputDirectory>
+            <destName>LICENSE</destName>
+        </file>
+        <file>
+            <source>src/main/assembly/android-pack-notice.txt</source>
+            <outputDirectory></outputDirectory>
+            <destName>NOTICE</destName>
+        </file>
     </files>
-    
+
     <fileSets>
-        <!-- license, readme, etc. calculated at build time -->
+        <!-- license, readme, etc. calculated at build time (exclude default LICENSE/NOTICE) -->
         <fileSet>
             <directory>${project.build.directory}/maven-shared-archive-resources/META-INF</directory>
-            <outputDirectory>/</outputDirectory> 
+            <outputDirectory></outputDirectory>
+            <excludes>
+                <exclude>LICENSE</exclude>
+                <exclude>NOTICE</exclude>
+            </excludes>
         </fileSet>
     </fileSets>
+
+    <!-- Runtime XML stack required outside Maven (Android / Woodstox / StAX). -->
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory>
+            <useProjectArtifact>false</useProjectArtifact>
+            <scope>runtime</scope>
+            <includes>
+                <include>com.fasterxml.woodstox:woodstox-core</include>
+                <include>javax.xml.stream:stax-api</include>
+                <include>org.codehaus.woodstox:stax2-api</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
 </assembly>

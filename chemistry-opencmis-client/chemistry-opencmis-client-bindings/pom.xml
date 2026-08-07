@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.apache.chemistry.opencmis</groupId>
         <artifactId>chemistry-opencmis</artifactId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>2.0.0-RC2-nemakiware</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -36,6 +36,7 @@
     
     <properties>
         <parentBasedir>../../</parentBasedir>
+        <opencmis.integration.tests.skip>true</opencmis.integration.tests.skip>
     </properties>
 
     <build>
@@ -73,11 +74,11 @@
                     <instructions>
                         <Export-Package>
                             org.apache.chemistry.opencmis.client.bindings;version=${project.version},
+                            org.apache.chemistry.opencmis.client.bindings.cache;version=${project.version},
                             org.apache.chemistry.opencmis.client.bindings.spi.*;version=${project.version},
-                            org.apache.chemistry.opencmis.client.bindings.cache.*;version=${project.version},
                             !org.apache.chemistry.opencmis.commons.impl.json.*,
                             !org.apache.chemistry.opencmis.commons.impl.jaxb.*,
-                            !org.apache.http.*,
+                            !org.apache.hc.*,
                             !org.apache.cxf.*,
                             !okhttp3.*,
                             !okio.*
@@ -85,6 +86,47 @@
                         <Bundle-DocURL>${project.url}</Bundle-DocURL>
                     </instructions>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                      Legacy Simple* suites need a live CMIS endpoint.
+                      Keep them out of unit test; run via Failsafe with
+                      -Dopencmis.integration.tests.skip=false (manual),
+                      or rely on FIT AtomPub TCK in CI (verify-java21-25.yml).
+                    -->
+                    <excludes>
+                        <exclude>**/atompub/SimpleReadOnlyTests.java</exclude>
+                        <exclude>**/atompub/SimpleReadWriteTests.java</exclude>
+                        <exclude>**/webservices/SimpleReadOnlyTests.java</exclude>
+                        <exclude>**/webservices/SimpleReadWriteTests.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- Default skip=true: no external server in unit CI.
+                         Required integration coverage is FIT AtomPub in
+                         .github/workflows/verify-java21-25.yml. -->
+                    <skipITs>${opencmis.integration.tests.skip}</skipITs>
+                    <includes>
+                        <include>**/atompub/SimpleReadOnlyTests.java</include>
+                        <include>**/atompub/SimpleReadWriteTests.java</include>
+                        <include>**/webservices/SimpleReadOnlyTests.java</include>
+                        <include>**/webservices/SimpleReadWriteTests.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>run-cmis-integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             
         </plugins>
@@ -102,15 +144,16 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>${apacheclient.version}</version>
-            <scope>provided</scope>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>${httpclient5.version}</version>
+            <!-- Compile scope: ApacheClientHttpInvoker is the default HTTP stack. -->
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
+            <artifactId>${okhttp.artifactId}</artifactId>
             <version>${okhttp.version}</version>
+            <!-- Optional alternative invoker; keep provided so consumers opt in. -->
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -132,7 +175,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <version>${log4j.version}</version>
             <scope>test</scope>
         </dependency>

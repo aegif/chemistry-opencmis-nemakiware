@@ -88,13 +88,13 @@ Compared with phase 4 (`1.1.3-nemakiware`):
 
 NemakiWare consumption remains out of scope for phase 5.
 
-Phase 6 modernization notes (2.0.0-RC1-nemakiware)
+Phase 6 modernization notes (2.0.0-RC2-nemakiware)
 =================================================
 
 Compared with phase 5 (`1.1.4-nemakiware`):
 
- - Artifact version: `2.0.0-RC1-nemakiware` (first release candidate for
-   the 2.0.0 line) — major bump for ANTLR4 / public API binary breaks vs
+ - Artifact version: `2.0.0-RC2-nemakiware` (release candidate for the
+   2.0.0 line) — major bump for ANTLR4 / public API binary breaks vs
    `1.1.x-nemakiware` (not a drop-in jar replace)
  - TCK main (`AbstractCmisTest`, `AbstractCmisTestGroup`,
    `JUnitHelper`) switched from JUnit 4 to JUnit Jupiter API
@@ -136,8 +136,10 @@ Compared with phase 5 (`1.1.4-nemakiware`):
  - RC1 hardening: default streaming uploads, orphan temp-byte reclaim,
    HTTP redirects off by default (`...binding.http.followredirects`),
    Content-Length / stream length checks
+ - RC2: mark-supported {@code ContentStream} bodies remain reusable across
+   successive sends (TCK Change Token / typical client reuse)
 
-Breaking / migration notes (2.0.0-RC1-nemakiware)
+Breaking / migration notes (2.0.0-RC2-nemakiware)
 ------------------------------------------------
 
 This line is intentionally a **major** version relative to
@@ -147,7 +149,7 @@ against `CmisTree`. Coordinate a full rebuild of custom extensions.
 
 Maven coordinates for NemakiWare intake (GitHub Packages):
 
-    org.apache.chemistry.opencmis:*:2.0.0-RC1-nemakiware
+    org.apache.chemistry.opencmis:*:2.0.0-RC2-nemakiware
 
 ANTLR3 → ANTLR4 (source + binary break for custom query walkers):
 
@@ -210,13 +212,13 @@ Out of scope for this fork line (do not track as OpenCMIS work):
    (OpenCMIS remains a NemakiWare building block; consumption is a
    separate NemakiWare change)
 
-OpenCMIS fork backlog status (phase 6+ / 2.0.0-RC1):
+OpenCMIS fork backlog status (phase 6+ / 2.0.0-RC2):
 
  - Done in-repo: HC5 default invoker, FIT AtomPub/Browser/WebServices
    NonVers gates, Android D8 + API 26 emulator smoke, ANTLR4 query
    compat corpora, HTTP session client close, streaming upload default,
-   RC1 safety hardening (redirects, orphan reclaim, length checks)
- - Next: NemakiWare consumption of `2.0.0-RC1-nemakiware` from GitHub
+   RC1 safety hardening, RC2 reusable ContentStream streaming
+ - Next: NemakiWare consumption of `2.0.0-RC2-nemakiware` from GitHub
    Packages (see above). Upstream `TODO`/`FIXME` comments in inmemory,
    bridge, TCK, and archetypes are not modernization backlog.
 

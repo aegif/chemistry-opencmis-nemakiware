@@ -31,6 +31,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -57,8 +58,11 @@ import org.apache.chemistry.opencmis.client.bindings.impl.SessionImpl;
 import org.apache.chemistry.opencmis.client.bindings.spi.AbstractAuthenticationProvider;
 import org.apache.chemistry.opencmis.client.bindings.spi.BindingSession;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
+import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
+import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
+import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1519,6 +1523,41 @@ public class ApacheClientHttpInvokerPoolTest {
             }
             HttpInvokerSessionResources.close(session);
             deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void contentStreamFromByteArrayCanBeSentTwice() throws Exception {
+        // Mirrors TCK ChangeTokenTest: same ContentStream instance reused for a
+        // second setContentStream after the first send consumed the BAIS.
+        AtomicLong received = new AtomicLong();
+        AtomicLong hits = new AtomicLong();
+        ServerHandle server = startServer("/upload", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                hits.incrementAndGet();
+                received.addAndGet(readFully(exchange.getRequestBody()).length);
+                exchange.sendResponseHeaders(201, -1);
+                exchange.close();
+            }
+        });
+        BindingSession session = new SessionImpl();
+        try {
+            byte[] payload = IOUtils.toUTF8Bytes("New content");
+            ContentStream contentStream = new ContentStreamImpl("content2.txt",
+                    BigInteger.valueOf(payload.length), "text/plain", new ByteArrayInputStream(payload));
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            UrlBuilder url = new UrlBuilder("http://127.0.0.1:" + server.port + "/upload");
+            // Same ContentStream, new Output each call (as Document.setContentStream does).
+            assertEquals(201, invoker.invokePOST(url, "application/octet-stream",
+                    StreamableOutput.fromContentStream(contentStream), session).getResponseCode());
+            assertEquals(201, invoker.invokePOST(url, "application/octet-stream",
+                    StreamableOutput.fromContentStream(contentStream), session).getResponseCode());
+            assertEquals(2, hits.get());
+            assertEquals(payload.length * 2L, received.get());
+        } finally {
+            HttpInvokerSessionResources.close(session);
+            server.stop();
         }
     }
 

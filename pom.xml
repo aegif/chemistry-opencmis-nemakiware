@@ -32,7 +32,7 @@
     <groupId>org.apache.chemistry.opencmis</groupId>
     <artifactId>chemistry-opencmis</artifactId>
     <name>Apache Chemistry OpenCMIS</name>
-    <version>2.0.0-RC1-nemakiware</version>
+    <version>2.0.0-RC2-nemakiware</version>
     <packaging>pom</packaging>
 
     <organization>

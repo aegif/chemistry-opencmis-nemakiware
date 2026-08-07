@@ -24,8 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -41,8 +43,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPInputStream;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -200,6 +204,8 @@ public class ApacheClientHttpInvokerPoolTest {
 
             BindingSession session = new SessionImpl();
             try {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(8 * 1024), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 final int payloadSize = 64 * 1024;
@@ -244,6 +250,8 @@ public class ApacheClientHttpInvokerPoolTest {
         File tempDir = Files.createTempDirectory("opencmis-spool-fail-").toFile();
         BindingSession session = new SessionImpl();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
             session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
             ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
@@ -289,6 +297,8 @@ public class ApacheClientHttpInvokerPoolTest {
 
             BindingSession session = new SessionImpl();
             try {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 final int actualSize = 32 * 1024;
@@ -334,6 +344,8 @@ public class ApacheClientHttpInvokerPoolTest {
 
         BindingSession session = new SessionImpl();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(64 * 1024), true);
             final byte[] payload = "New content".getBytes(StandardCharsets.UTF_8);
             final java.io.ByteArrayInputStream stream = new java.io.ByteArrayInputStream(payload);
@@ -373,6 +385,8 @@ public class ApacheClientHttpInvokerPoolTest {
             ExecutorService pool = Executors.newFixedThreadPool(2);
             executors.add(pool);
             try {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(1), true);
@@ -434,6 +448,8 @@ public class ApacheClientHttpInvokerPoolTest {
             ExecutorService pool = Executors.newFixedThreadPool(2);
             executors.add(pool);
             try {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(1), true);
@@ -482,6 +498,8 @@ public class ApacheClientHttpInvokerPoolTest {
             executors.add(pool);
             try {
                 for (BindingSession session : Arrays.asList(sessionMax1, sessionMax2)) {
+                    session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                            SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                     session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
                     session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                     session.put(SessionParameter.HTTP_CONNECTION_REQUEST_TIMEOUT, Integer.valueOf(500), true);
@@ -526,6 +544,8 @@ public class ApacheClientHttpInvokerPoolTest {
         BindingSession second = new SessionImpl();
         try {
             for (BindingSession session : Arrays.asList(first, second)) {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(512), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(2), true);
@@ -562,6 +582,8 @@ public class ApacheClientHttpInvokerPoolTest {
         executors.add(pool);
         try {
             // Stay under memory limit so this never spills to disk.
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(64 * 1024), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(1), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES, Long.valueOf(16 * 1024 * 1024), true);
@@ -614,6 +636,8 @@ public class ApacheClientHttpInvokerPoolTest {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         executors.add(pool);
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(64 * 1024), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(4), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES, Integer.valueOf(1500), true);
@@ -721,6 +745,8 @@ public class ApacheClientHttpInvokerPoolTest {
         File tempDir = Files.createTempDirectory("opencmis-spill-orphan-").toFile();
         BindingSession session = new SessionImpl();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1000), true);
             session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(2), true);
@@ -792,6 +818,8 @@ public class ApacheClientHttpInvokerPoolTest {
         ExecutorService pool = Executors.newFixedThreadPool(2);
         executors.add(pool);
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(64 * 1024), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(4), true);
             // Budget fits exactly one 8 KiB body at a time.
@@ -828,6 +856,8 @@ public class ApacheClientHttpInvokerPoolTest {
         BindingSession session = new SessionImpl();
         ServerHandle server = startDrainUploadServer();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
             session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES, Long.valueOf(64 * 1024), true);
@@ -859,6 +889,8 @@ public class ApacheClientHttpInvokerPoolTest {
         File tempDir = Files.createTempDirectory("opencmis-max-size-").toFile();
         BindingSession session = new SessionImpl();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(512), true);
             session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_SIZE, Integer.valueOf(2048), true);
@@ -880,6 +912,8 @@ public class ApacheClientHttpInvokerPoolTest {
     public void memoryOnlyMaxSizeIsEnforcedWithoutSpill() throws Exception {
         BindingSession session = new SessionImpl();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(64 * 1024), true);
             session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_SIZE, Integer.valueOf(2048), true);
             ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
@@ -918,6 +952,8 @@ public class ApacheClientHttpInvokerPoolTest {
             ExecutorService pool = Executors.newFixedThreadPool(2);
             executors.add(pool);
             try {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(512), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(4), true);
@@ -952,6 +988,8 @@ public class ApacheClientHttpInvokerPoolTest {
         File tempDir = Files.createTempDirectory("opencmis-ioe-spool-").toFile();
         BindingSession session = new SessionImpl();
         try {
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                    SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
             session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(512), true);
             session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
             ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
@@ -989,6 +1027,8 @@ public class ApacheClientHttpInvokerPoolTest {
             ExecutorService pool = Executors.newFixedThreadPool(2);
             executors.add(pool);
             try {
+                session.put(SessionParameter.HTTP_REQUEST_BODY_MODE,
+                        SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE, true);
                 session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(512), true);
                 session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
                 session.put(SessionParameter.HTTP_REQUEST_SPOOL_MAX_CONCURRENT, Integer.valueOf(1), true);
@@ -1228,6 +1268,238 @@ public class ApacheClientHttpInvokerPoolTest {
                 }
             }
         };
+    }
+
+    @Test
+    public void streamableOutputClosedWhenConnectFails() throws Exception {
+        BindingSession session = new SessionImpl();
+        final AtomicBoolean closed = new AtomicBoolean(false);
+        final byte[] payload = "leak-check".getBytes(StandardCharsets.UTF_8);
+        StreamableOutput body = new StreamableOutput() {
+            @Override
+            public long getContentLength() {
+                return payload.length;
+            }
+
+            @Override
+            public InputStream openStream() {
+                return new FilterInputStream(new ByteArrayInputStream(payload)) {
+                    @Override
+                    public void close() throws IOException {
+                        closed.set(true);
+                        super.close();
+                    }
+                };
+            }
+
+            @Override
+            public void write(OutputStream out) throws Exception {
+                out.write(payload);
+            }
+        };
+        try {
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            assertThrows(CmisConnectionException.class,
+                    () -> invoker.invokePOST(new UrlBuilder("http://127.0.0.1:1/no-server"),
+                            "application/octet-stream", body, session));
+            assertTrue(closed.get(), "InputStreamEntity stream must be closed when connect fails");
+        } finally {
+            HttpInvokerSessionResources.close(session);
+        }
+    }
+
+    @Test
+    public void autoModeGzipStreamsWithoutSpool() throws Exception {
+        File tempDir = Files.createTempDirectory("opencmis-stream-gzip-").toFile();
+        AtomicReference<String> contentEncoding = new AtomicReference<String>();
+        AtomicReference<byte[]> received = new AtomicReference<byte[]>();
+        ServerHandle server = null;
+        BindingSession session = new SessionImpl();
+        try {
+            server = startServer("/upload", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    contentEncoding.set(exchange.getRequestHeaders().getFirst("Content-Encoding"));
+                    received.set(readFully(exchange.getRequestBody()));
+                    byte[] ok = "OK".getBytes(StandardCharsets.UTF_8);
+                    exchange.sendResponseHeaders(201, ok.length);
+                    exchange.getResponseBody().write(ok);
+                    exchange.close();
+                }
+            });
+            session.put(SessionParameter.CLIENT_COMPRESSION, "true", true);
+            session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(256), true);
+            session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
+            final byte[] payload = new byte[16 * 1024];
+            Arrays.fill(payload, (byte) 'G');
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokePOST(
+                    new UrlBuilder("http://127.0.0.1:" + server.port + "/upload"), "application/octet-stream",
+                    fillingOutput(payload.length / 1024, 1024, (byte) 'G'), session);
+            assertEquals(201, response.getResponseCode());
+            assertEquals("gzip", contentEncoding.get());
+            String[] temps = tempDir.list();
+            assertNotNull(temps);
+            assertEquals(0, temps.length, "gzip auto stream must not spool");
+            byte[] wire = received.get();
+            assertNotNull(wire);
+            assertTrue(wire.length > 0);
+            try (GZIPInputStream gin = new GZIPInputStream(new ByteArrayInputStream(wire))) {
+                assertEquals(payload.length, readFully(gin).length);
+            }
+            assertEquals(0, RequestSpoolLimiter.getInstance().getActiveSpools());
+        } finally {
+            if (server != null) {
+                server.stop();
+            }
+            HttpInvokerSessionResources.close(session);
+            deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void unknownBodyModeFallsBackToAutoStreaming() throws Exception {
+        File tempDir = Files.createTempDirectory("opencmis-stream-unknown-mode-").toFile();
+        AtomicLong received = new AtomicLong();
+        ServerHandle server = null;
+        BindingSession session = new SessionImpl();
+        try {
+            server = startServer("/upload", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    received.set(readFully(exchange.getRequestBody()).length);
+                    byte[] ok = "OK".getBytes(StandardCharsets.UTF_8);
+                    exchange.sendResponseHeaders(201, ok.length);
+                    exchange.getResponseBody().write(ok);
+                    exchange.close();
+                }
+            });
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE, "not-a-mode", true);
+            session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(128), true);
+            session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
+            final int payloadSize = 8 * 1024;
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokePOST(
+                    new UrlBuilder("http://127.0.0.1:" + server.port + "/upload"), "application/octet-stream",
+                    fillingOutput(payloadSize / 1024, 1024, (byte) 'U'), session);
+            assertEquals(201, response.getResponseCode());
+            assertEquals(payloadSize, received.get());
+            assertEquals(0, tempDir.list().length);
+        } finally {
+            if (server != null) {
+                server.stop();
+            }
+            HttpInvokerSessionResources.close(session);
+            deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void autoModeStreamsChunkedWithoutTempSpill() throws Exception {
+        File tempDir = Files.createTempDirectory("opencmis-stream-auto-").toFile();
+        AtomicReference<String> contentLength = new AtomicReference<String>();
+        AtomicReference<String> transferEncoding = new AtomicReference<String>();
+        AtomicLong received = new AtomicLong();
+        ServerHandle server = null;
+        BindingSession session = new SessionImpl();
+        try {
+            server = startServer("/upload", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    contentLength.set(exchange.getRequestHeaders().getFirst("Content-Length"));
+                    transferEncoding.set(exchange.getRequestHeaders().getFirst("Transfer-Encoding"));
+                    received.set(readFully(exchange.getRequestBody()).length);
+                    byte[] ok = "OK".getBytes(StandardCharsets.UTF_8);
+                    exchange.sendResponseHeaders(201, ok.length);
+                    exchange.getResponseBody().write(ok);
+                    exchange.close();
+                }
+            });
+            // default auto: large body must not spill to temp
+            session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
+            session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
+            final int payloadSize = 64 * 1024;
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokePOST(
+                    new UrlBuilder("http://127.0.0.1:" + server.port + "/upload"), "application/octet-stream",
+                    fillingOutput(payloadSize / 1024, 1024, (byte) 'S'), session);
+            assertEquals(201, response.getResponseCode());
+            assertEquals(payloadSize, received.get());
+            String[] temps = tempDir.list();
+            assertNotNull(temps);
+            assertEquals(0, temps.length, "auto stream must not create temp spool files");
+            String te = transferEncoding.get();
+            String cl = contentLength.get();
+            assertTrue((te != null && te.toLowerCase().contains("chunked")) || cl == null,
+                    "auto stream should use chunked transfer; CL=" + cl + " TE=" + te);
+        } finally {
+            if (server != null) {
+                server.stop();
+            }
+            HttpInvokerSessionResources.close(session);
+            deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void streamableOutputSendsKnownContentLengthWithoutSpool() throws Exception {
+        File tempDir = Files.createTempDirectory("opencmis-stream-len-").toFile();
+        AtomicReference<String> contentLength = new AtomicReference<String>();
+        AtomicLong received = new AtomicLong();
+        ServerHandle server = null;
+        BindingSession session = new SessionImpl();
+        try {
+            server = startServer("/upload", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    contentLength.set(exchange.getRequestHeaders().getFirst("Content-Length"));
+                    received.set(readFully(exchange.getRequestBody()).length);
+                    byte[] ok = "OK".getBytes(StandardCharsets.UTF_8);
+                    exchange.sendResponseHeaders(201, ok.length);
+                    exchange.getResponseBody().write(ok);
+                    exchange.close();
+                }
+            });
+            session.put(SessionParameter.HTTP_REQUEST_BODY_MODE, SessionParameter.HTTP_REQUEST_BODY_MODE_AUTO, true);
+            session.put(SessionParameter.HTTP_REQUEST_MEMORY_LIMIT, Integer.valueOf(1024), true);
+            session.put(SessionParameter.HTTP_TEMP_DIR, tempDir.getAbsolutePath(), true);
+            final byte[] payload = new byte[48 * 1024];
+            Arrays.fill(payload, (byte) 'L');
+            StreamableOutput body = new StreamableOutput() {
+                @Override
+                public long getContentLength() {
+                    return payload.length;
+                }
+
+                @Override
+                public InputStream openStream() {
+                    return new java.io.ByteArrayInputStream(payload);
+                }
+
+                @Override
+                public void write(OutputStream out) throws Exception {
+                    out.write(payload);
+                }
+            };
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokePOST(
+                    new UrlBuilder("http://127.0.0.1:" + server.port + "/upload"), "application/octet-stream", body,
+                    session);
+            assertEquals(201, response.getResponseCode());
+            assertEquals(payload.length, received.get());
+            assertEquals(String.valueOf(payload.length), contentLength.get());
+            String[] temps = tempDir.list();
+            assertNotNull(temps);
+            assertEquals(0, temps.length, "known-length stream must not spool");
+            assertEquals(0, RequestSpoolLimiter.getInstance().getActiveSpools());
+            assertEquals(0L, RequestSpoolLimiter.getInstance().getActiveBytes());
+        } finally {
+            if (server != null) {
+                server.stop();
+            }
+            HttpInvokerSessionResources.close(session);
+            deleteRecursively(tempDir);
+        }
     }
 
     private static void deleteRecursively(File file) {

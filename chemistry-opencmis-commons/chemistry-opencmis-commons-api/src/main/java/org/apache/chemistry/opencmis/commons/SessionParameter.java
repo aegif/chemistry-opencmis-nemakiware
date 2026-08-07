@@ -267,11 +267,22 @@ package org.apache.chemistry.opencmis.commons;
  * <td>1048576 (1 MiB)</td>
  * </tr>
  * <tr>
+ * <td>{@link #HTTP_REQUEST_BODY_MODE}</td>
+ * <td>How Apache HttpClient 5 sends request bodies:
+ * {@code auto} (default) and {@code stream} write once to the wire (known
+ * length via {@code StreamableOutput}, otherwise chunked; gzip applied
+ * on the fly); {@code materialize} buffers to heap/disk for a known
+ * Content-Length and classloader-wide spool limits.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
+ * <td>{@code auto} | {@code stream} | {@code materialize}</td>
+ * <td>no</td>
+ * <td>{@code auto}</td>
+ * </tr>
+ * <tr>
  * <td>{@link #HTTP_REQUEST_MEMORY_LIMIT}</td>
  * <td>Max request body bytes kept in heap before spilling to a temp file
- * (Apache HttpClient 5). Preserves Content-Length without loading large
- * uploads entirely into memory. Bodies are always spooled (declared length
- * alone is not streamed).</td>
+ * when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}. Preserves
+ * Content-Length without loading large uploads entirely into memory.</td>
  * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
  * <td>size in bytes</td>
  * <td>no</td>
@@ -841,8 +852,33 @@ public final class SessionParameter {
     public static final String HTTP_RESPONSE_BUFFER_LIMIT = "org.apache.chemistry.opencmis.binding.http.responsebufferlimit";
 
     /**
+     * Apache HttpClient 5: request body send mode.
+     * <ul>
+     * <li>{@code auto} (default) — stream to the wire (known length via
+     * {@code StreamableOutput} uses {@code Content-Length}; otherwise chunked
+     * {@code writeTo}), matching JDK {@code DefaultHttpInvoker} for large ECM
+     * uploads. Same wire behaviour as {@code stream}</li>
+     * <li>{@code stream} — always stream (never spool)</li>
+     * <li>{@code materialize} — always buffer to heap/disk for Content-Length
+     * and classloader-wide spool limits (use when a proxy/server requires
+     * Content-Length or when spool back-pressure is desired)</li>
+     * </ul>
+     */
+    public static final String HTTP_REQUEST_BODY_MODE = "org.apache.chemistry.opencmis.binding.http.requestbodymode";
+
+    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: stream when possible. */
+    public static final String HTTP_REQUEST_BODY_MODE_AUTO = "auto";
+
+    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: always stream. */
+    public static final String HTTP_REQUEST_BODY_MODE_STREAM = "stream";
+
+    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: always materialize. */
+    public static final String HTTP_REQUEST_BODY_MODE_MATERIALIZE = "materialize";
+
+    /**
      * Apache HttpClient 5: max request body bytes kept in heap before spilling
-     * to a temporary file (preserves Content-Length for large uploads).
+     * to a temporary file when materializing (preserves Content-Length for
+     * large uploads).
      */
     public static final String HTTP_REQUEST_MEMORY_LIMIT = "org.apache.chemistry.opencmis.binding.http.requestmemorylimit";
 

@@ -19,7 +19,6 @@
 package org.apache.chemistry.opencmis.client.bindings.spi.atompub;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -36,6 +35,7 @@ import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomEnt
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomFeed;
 import org.apache.chemistry.opencmis.client.bindings.spi.atompub.objects.AtomLink;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Output;
+import org.apache.chemistry.opencmis.client.bindings.spi.http.StreamableOutput;
 import org.apache.chemistry.opencmis.client.bindings.spi.http.Response;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
@@ -60,7 +60,6 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentExcep
 import org.apache.chemistry.opencmis.commons.exceptions.CmisNotSupportedException;
 import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
 import org.apache.chemistry.opencmis.commons.impl.Constants;
-import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 import org.apache.chemistry.opencmis.commons.impl.MimeHelper;
 import org.apache.chemistry.opencmis.commons.impl.ReturnVersion;
 import org.apache.chemistry.opencmis.commons.impl.UrlBuilder;
@@ -854,8 +853,6 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
             url.addParameter(Constants.PARAM_OVERWRITE_FLAG, overwriteFlag);
         }
 
-        final InputStream stream = contentStream.getStream();
-
         // Content-Disposition header for the filename
         Map<String, String> headers = null;
         if (contentStream.getFileName() != null) {
@@ -866,13 +863,10 @@ public class ObjectServiceImpl extends AbstractAtomPubService implements ObjectS
                                     contentStream.getFileName()));
         }
 
-        // send content
-        Response resp = put(url, contentStream.getMimeType(), headers, new Output() {
-            @Override
-            public void write(OutputStream out) throws IOException {
-                IOUtils.copy(stream, out);
-            }
-        });
+        // Prefer StreamableOutput when length is known so HC5 can send with
+        // Content-Length without spooling the entire body first.
+        Response resp = put(url, contentStream.getMimeType(), headers,
+                StreamableOutput.fromContentStream(contentStream));
 
         // check response code further
         if ((resp.getResponseCode() != 200) && (resp.getResponseCode() != 201) && (resp.getResponseCode() != 204)) {

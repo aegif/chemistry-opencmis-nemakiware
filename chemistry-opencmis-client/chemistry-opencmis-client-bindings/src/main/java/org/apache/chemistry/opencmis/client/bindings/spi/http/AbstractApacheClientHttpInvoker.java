@@ -64,9 +64,11 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
 import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.FileEntity;
+import org.apache.hc.core5.http.io.entity.InputStreamEntity;
 import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,6 +142,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         InputStream errorStream = null;
         File requestTempFile = null;
         RequestSpoolLimiter.SpoolLease requestSpoolLease = null;
+        HttpEntity requestEntity = null;
 
         try {
             // log before connect
@@ -266,11 +269,16 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 if (requestSpoolLease != null) {
                     requestSpoolLease.releasePermitOnly();
                 }
-                request.setEntity(prepared.entity);
+                requestEntity = prepared.entity;
+                request.setEntity(requestEntity);
             }
 
             // connect
             response = httpclient.execute(request);
+            // Request entity was written (or closed by HC5 on failure); drop local ref so
+            // finally does not double-close a stream HC5 may still touch during response
+            // handling. Streaming InputStreamEntity is closed by HC5 after send.
+            requestEntity = null;
             HttpEntity entity = response.getEntity();
 
             // get stream, if present
@@ -316,6 +324,18 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         } catch (Exception e) {
             throw new CmisConnectionException(url.toString(), respCode, e);
         } finally {
+            if (requestEntity != null) {
+                // execute() never ran or failed before HC5 took ownership — close so
+                // StreamableOutput / InputStreamEntity streams do not leak.
+                try {
+                    requestEntity.close();
+                } catch (Exception closeEx) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Closing request entity failed: {}", closeEx.toString());
+                    }
+                }
+                requestEntity = null;
+            }
             if (response != null) {
                 try {
                     response.close();
@@ -348,15 +368,16 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     }
 
     /**
-     * Builds a request entity by spooling to memory then optionally to a temp
-     * file under classloader-wide concurrency and size limits. A materialization
-     * permit is taken before any body bytes are buffered and released as soon as
-     * materialization finishes, so HTTP networking does not block other uploads.
-     * Byte budget remains charged until the body is discarded. Always produces a
-     * known Content-Length with a repeatable entity (byte array or file).
+     * Builds a request entity. Default {@code auto} mode streams to the wire
+     * (like {@link DefaultHttpInvoker}) when possible; {@code materialize} mode
+     * spools to memory/disk under classloader-wide limits for a known
+     * Content-Length and repeatable entity.
      */
     protected PreparedRequestBody prepareRequestBody(final Output writer, final boolean gzip,
             final ContentType entityContentType, BindingSession session) throws IOException {
+        if (shouldStreamRequestBody(writer, gzip, session)) {
+            return prepareStreamingRequestBody(writer, gzip, entityContentType);
+        }
         RequestBodySpool spool = spoolRequestBody(writer, gzip, session);
         try {
             HttpEntity entity = spool.toEntity(entityContentType);
@@ -369,6 +390,118 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         } catch (Error err) {
             spool.discard();
             throw err;
+        }
+    }
+
+    /**
+     * {@code true} when the body should be written once to the socket instead of
+     * being fully materialized first. {@code auto} and {@code stream} both
+     * stream (including on-the-fly gzip); only {@code materialize} buffers.
+     */
+    protected boolean shouldStreamRequestBody(Output writer, boolean gzip, BindingSession session) {
+        return !SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE.equals(resolveRequestBodyMode(session));
+    }
+
+    protected static String resolveRequestBodyMode(BindingSession session) {
+        Object raw = session.get(SessionParameter.HTTP_REQUEST_BODY_MODE);
+        if (raw == null) {
+            return SessionParameter.HTTP_REQUEST_BODY_MODE_AUTO;
+        }
+        String mode = raw.toString().trim().toLowerCase();
+        if (SessionParameter.HTTP_REQUEST_BODY_MODE_STREAM.equals(mode)
+                || SessionParameter.HTTP_REQUEST_BODY_MODE_MATERIALIZE.equals(mode)
+                || SessionParameter.HTTP_REQUEST_BODY_MODE_AUTO.equals(mode)) {
+            return mode;
+        }
+        LOG.warn("Unknown {} value '{}'; using auto", SessionParameter.HTTP_REQUEST_BODY_MODE, mode);
+        return SessionParameter.HTTP_REQUEST_BODY_MODE_AUTO;
+    }
+
+    /**
+     * Streams the body without spooling. Prefer a known-length
+     * {@link StreamableOutput} ({@code Content-Length}); otherwise use chunked
+     * {@code writeTo} like {@link DefaultHttpInvoker}.
+     */
+    protected PreparedRequestBody prepareStreamingRequestBody(final Output writer, final boolean gzip,
+            final ContentType entityContentType) throws IOException {
+        if (!gzip && writer instanceof StreamableOutput) {
+            StreamableOutput streamable = (StreamableOutput) writer;
+            long length = streamable.getContentLength();
+            if (length >= 0L) {
+                InputStream in = streamable.openStream();
+                if (in == null) {
+                    throw new IOException("StreamableOutput.openStream() returned null");
+                }
+                HttpEntity entity = new InputStreamEntity(in, length, entityContentType);
+                return new PreparedRequestBody(entity, null, null);
+            }
+        }
+        HttpEntity entity = new StreamingOutputEntity(writer, entityContentType, gzip);
+        return new PreparedRequestBody(entity, null, null);
+    }
+
+    /**
+     * Non-repeatable entity that invokes {@link Output#write(OutputStream)}
+     * directly against the HTTP connection (chunked; Content-Length unknown).
+     */
+    protected static final class StreamingOutputEntity extends AbstractHttpEntity {
+        private final Output writer;
+        private final boolean gzip;
+
+        StreamingOutputEntity(Output writer, ContentType contentType, boolean gzip) {
+            // chunked=true: length unknown (especially after on-the-fly gzip)
+            super(contentType, gzip ? "gzip" : null, true);
+            this.writer = writer;
+            this.gzip = gzip;
+        }
+
+        @Override
+        public long getContentLength() {
+            return -1L;
+        }
+
+        @Override
+        public InputStream getContent() {
+            throw new UnsupportedOperationException("Streaming output entity cannot be read as InputStream");
+        }
+
+        @Override
+        public boolean isStreaming() {
+            return true;
+        }
+
+        @Override
+        public boolean isRepeatable() {
+            return false;
+        }
+
+        @Override
+        public void writeTo(OutputStream outStream) throws IOException {
+            // Do not close outStream — HC5 owns the connection stream.
+            OutputStream sink = outStream;
+            GZIPOutputStream gzipStream = null;
+            BufferedOutputStream buffered = null;
+            try {
+                if (gzip) {
+                    gzipStream = new GZIPOutputStream(sink, 4096);
+                    sink = gzipStream;
+                }
+                buffered = new BufferedOutputStream(sink, 64 * 1024);
+                writer.write(buffered);
+                buffered.flush();
+                if (gzipStream != null) {
+                    gzipStream.finish();
+                }
+            } catch (IOException ioe) {
+                throw ioe;
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+
+        @Override
+        public void close() {
+            // Connection stream is owned by HC5; nothing else to close.
         }
     }
 

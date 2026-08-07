@@ -173,25 +173,15 @@ HTTP invokers:
    - response bodies up to 1 MiB are buffered so pooled connections are
      released immediately (`...binding.http.responsebufferlimit`); larger
      bodies stream and must be closed by the caller
-   - request bodies are materialized under classloader-wide limits before the
-     HTTP connection is obtained (heap up to 1 MiB then temp file via
-     `...binding.http.requestmemorylimit`). The concurrency permit is held
-     only during buffering; after materialization it is released so other
-     uploads can spool while this request is on the wire. Byte budget stays
-     charged until the body is discarded. Limits (first materialization in
-     the classloader locks concurrent/total settings — later sessions with
-     different values are rejected; not a multi-webapp host limit unless
-     OpenCMIS is on a shared classloader):
-     - temp dir: `...binding.http.tempdir` (JVM default temp dir)
-     - max per request body (heap and/or disk): 5 GiB
-       (`...binding.http.requestspoolmaxsize`)
-     - max concurrent materializations: 32
-       (`...binding.http.requestspoolmaxconcurrent`)
-     - max total active body bytes (heap + disk): 20 GiB
-       (`...binding.http.requestspoolmaxtotalbytes`); when exhausted, new
-       bodies wait up to the connection-request timeout for budget instead
-       of failing immediately (only a body that alone exceeds the budget
-       fails fast)
+   - request body mode (`...binding.http.requestbodymode`, default `auto`):
+     `auto`/`stream` write once to the wire like the JDK invoker
+     (known-length `StreamableOutput` → Content-Length; otherwise chunked
+     `writeTo`; client gzip is applied on the fly). Set `materialize` for the
+     heap/temp-file spool path with classloader-wide limits
+     (`...binding.http.requestmemorylimit`, `...requestspoolmaxsize`,
+     `...requestspoolmaxconcurrent`, `...requestspoolmaxtotalbytes`). Spool
+     limits apply only while materializing; first materialization locks
+     concurrent/total settings.
  - Explicit alternatives (session parameter
    `org.apache.chemistry.opencmis.binding.httpinvoker.class`):
    - `...spi.http.OkHttpHttpInvoker` (OkHttp 5 / okhttp-jvm; recommended on Android)

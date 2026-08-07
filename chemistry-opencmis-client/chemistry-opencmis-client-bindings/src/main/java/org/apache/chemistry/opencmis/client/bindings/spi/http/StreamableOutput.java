@@ -28,9 +28,12 @@ import org.apache.chemistry.opencmis.commons.impl.IOUtils;
 /**
  * {@link Output} that can be sent without first spooling the entire body.
  * <p>
- * When {@link #getContentLength()} is non-negative, Apache HttpClient 5 may use
- * an {@code InputStreamEntity} with a known {@code Content-Length}. Otherwise
- * the invoker falls back to {@link #write(OutputStream)} (possibly chunked).
+ * When {@link #getContentLength()} is non-negative and client compression is
+ * off, Apache HttpClient 5 uses an {@code InputStreamEntity} with
+ * {@code Content-Length}. The stream must deliver exactly that many bytes
+ * (shorter streams fail the request; longer streams are truncated). Otherwise
+ * the invoker falls back to {@link #write(OutputStream)} (chunked, or gzipped
+ * on the fly).
  */
 public interface StreamableOutput extends Output {
 
@@ -40,18 +43,20 @@ public interface StreamableOutput extends Output {
     long getContentLength();
 
     /**
-     * Opens the body stream for a one-shot send. Invoked only when the streaming
-     * path with a known length is selected; the HTTP stack closes the stream.
+     * Opens the body stream for a one-shot send. Invoked only on the known-length
+     * streaming path; the HTTP stack closes the stream. Do not reuse the same
+     * instance for a second send — streams are not repeatable.
      */
     InputStream openStream() throws IOException;
 
     /**
-     * Builds a {@link StreamableOutput} from a {@link ContentStream} when the
-     * length is known; otherwise returns a plain copy {@link Output}.
+     * Builds a {@link StreamableOutput} from a {@link ContentStream} when
+     * {@link ContentStream#getLength()} is non-negative; otherwise returns a
+     * plain copy {@link Output} (chunked {@code writeTo}).
      */
     static Output fromContentStream(final ContentStream contentStream) {
         if (contentStream == null || contentStream.getStream() == null) {
-            throw new IllegalArgumentException("Content stream must be set");
+            throw new IllegalArgumentException("ContentStream and its InputStream must be set");
         }
         final InputStream stream = contentStream.getStream();
         final long length = contentStream.getLength();

@@ -281,8 +281,9 @@ package org.apache.chemistry.opencmis.commons;
  * <tr>
  * <td>{@link #HTTP_REQUEST_MEMORY_LIMIT}</td>
  * <td>Max request body bytes kept in heap before spilling to a temp file
- * when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}. Preserves
- * Content-Length without loading large uploads entirely into memory.</td>
+ * when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize} (ignored for
+ * {@code auto}/{@code stream}). Preserves Content-Length without loading
+ * large uploads entirely into memory.</td>
  * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
  * <td>size in bytes</td>
  * <td>no</td>
@@ -325,14 +326,26 @@ package org.apache.chemistry.opencmis.commons;
  * <td>Max total bytes across all active materialized request bodies (heap
  * and/or disk) classloader-wide (Apache HttpClient 5). When the budget is
  * exhausted, new bodies wait up to {@link #HTTP_CONNECTION_REQUEST_TIMEOUT}
- * for active bodies to release bytes before failing; a body that alone
- * exceeds the budget fails immediately. Locked together with
+ * for active bodies to release bytes (including deferred reclaim of
+ * undeleted spill temps) before failing; a body that alone exceeds the
+ * budget fails immediately. Locked together with
  * {@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT} on first materialization; later
- * sessions with a different value are rejected.</td>
+ * sessions with a different value are rejected. Unused when
+ * {@link #HTTP_REQUEST_BODY_MODE} is {@code auto} or {@code stream}.</td>
  * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker}</td>
  * <td>size in bytes</td>
  * <td>no</td>
  * <td>21474836480 (20 GiB)</td>
+ * </tr>
+ * <tr>
+ * <td>{@link #HTTP_FOLLOW_REDIRECTS}</td>
+ * <td>Whether Apache HttpClient 5 / OkHttp follow redirects. Default
+ * {@code false}. Does not affect JDK {@code DefaultHttpInvoker}.</td>
+ * <td>AtomPub / Browser with {@code ApacheClientHttpInvoker} /
+ * {@code OkHttpHttpInvoker}</td>
+ * <td>{@code true} / {@code false}</td>
+ * <td>no</td>
+ * <td>{@code false}</td>
  * </tr>
  * <tr>
  * <td colspan="6"><b>Cache settings</b></td>
@@ -866,36 +879,46 @@ public final class SessionParameter {
      */
     public static final String HTTP_REQUEST_BODY_MODE = "org.apache.chemistry.opencmis.binding.http.requestbodymode";
 
-    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: stream when possible. */
+    /**
+     * Value for {@link #HTTP_REQUEST_BODY_MODE}: stream to the wire (default;
+     * same wire behaviour as {@link #HTTP_REQUEST_BODY_MODE_STREAM}).
+     */
     public static final String HTTP_REQUEST_BODY_MODE_AUTO = "auto";
 
-    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: always stream. */
+    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: always stream (never spool). */
     public static final String HTTP_REQUEST_BODY_MODE_STREAM = "stream";
 
-    /** Value for {@link #HTTP_REQUEST_BODY_MODE}: always materialize. */
+    /**
+     * Value for {@link #HTTP_REQUEST_BODY_MODE}: always buffer to heap/disk
+     * (enables classloader-wide spool limits).
+     */
     public static final String HTTP_REQUEST_BODY_MODE_MATERIALIZE = "materialize";
 
     /**
      * Apache HttpClient 5: max request body bytes kept in heap before spilling
-     * to a temporary file when materializing (preserves Content-Length for
-     * large uploads).
+     * to a temporary file when {@link #HTTP_REQUEST_BODY_MODE} is
+     * {@code materialize} (preserves Content-Length for large uploads).
+     * Ignored for {@code auto}/{@code stream}.
      */
     public static final String HTTP_REQUEST_MEMORY_LIMIT = "org.apache.chemistry.opencmis.binding.http.requestmemorylimit";
 
     /**
-     * Apache HttpClient 5: directory for request-body temp files.
+     * Apache HttpClient 5: directory for request-body temp files when
+     * {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
      */
     public static final String HTTP_TEMP_DIR = "org.apache.chemistry.opencmis.binding.http.tempdir";
 
     /**
      * Apache HttpClient 5: max size of a single materialized request body
-     * (heap and/or disk).
+     * (heap and/or disk). Applies only when
+     * {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
      */
     public static final String HTTP_REQUEST_SPOOL_MAX_SIZE = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxsize";
 
     /**
      * Apache HttpClient 5: max concurrent request-body materializations
      * (heap and/or disk; classloader-wide; locked on first materialization).
+     * Applies only when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
      */
     public static final String HTTP_REQUEST_SPOOL_MAX_CONCURRENT = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxconcurrent";
 
@@ -904,10 +927,19 @@ public final class SessionParameter {
      * request bodies (heap and/or disk; classloader-wide; locked with
      * {@link #HTTP_REQUEST_SPOOL_MAX_CONCURRENT} on first materialization).
      * When exhausted, new bodies wait up to
-     * {@link #HTTP_CONNECTION_REQUEST_TIMEOUT} for budget instead of failing
-     * immediately.
+     * {@link #HTTP_CONNECTION_REQUEST_TIMEOUT} for budget (including deferred
+     * reclaim of undeleted spill temps) instead of failing immediately.
+     * Applies only when {@link #HTTP_REQUEST_BODY_MODE} is {@code materialize}.
      */
     public static final String HTTP_REQUEST_SPOOL_MAX_TOTAL_BYTES = "org.apache.chemistry.opencmis.binding.http.requestspoolmaxtotalbytes";
+
+    /**
+     * Whether Apache HttpClient 5 / OkHttp follow HTTP redirects. Default
+     * {@code false} (safer against unexpected {@code Location} targets). Set
+     * {@code true} only when the repository or proxy is trusted to redirect.
+     * Does not affect {@code DefaultHttpInvoker} (JDK redirect policy).
+     */
+    public static final String HTTP_FOLLOW_REDIRECTS = "org.apache.chemistry.opencmis.binding.http.followredirects";
 
     public static final String PROXY_USER = "org.apache.chemistry.opencmis.binding.proxyuser";
     public static final String PROXY_PASSWORD = "org.apache.chemistry.opencmis.binding.proxypassword";

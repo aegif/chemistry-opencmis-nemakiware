@@ -113,6 +113,11 @@ public class CmisCommonTree implements CmisTree {
         children.add(child);
     }
 
+    /**
+     * Replaces the child at {@code i}. Unlike {@link #addChild}, nil nodes are
+     * <em>not</em> spliced — callers (e.g. {@code CmisQueryWalker}) replace a
+     * slot with a concrete typed node.
+     */
     @Override
     public void setChild(int i, CmisTree child) {
         if (child != null) {

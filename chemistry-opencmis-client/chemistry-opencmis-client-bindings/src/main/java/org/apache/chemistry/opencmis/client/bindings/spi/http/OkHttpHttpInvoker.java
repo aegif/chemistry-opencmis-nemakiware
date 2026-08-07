@@ -54,6 +54,12 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okio.BufferedSink;
 
+/**
+ * {@link HttpInvoker} backed by OkHttp 5. Recommended on Android; set
+ * {@link SessionParameter#HTTP_INVOKER_CLASS} explicitly. Follows redirects
+ * only when {@link SessionParameter#HTTP_FOLLOW_REDIRECTS} is {@code true}
+ * (default {@code false}).
+ */
 public class OkHttpHttpInvoker implements HttpInvoker {
 
     private static final Logger LOG = LoggerFactory.getLogger(OkHttpHttpInvoker.class);
@@ -155,7 +161,7 @@ public class OkHttpHttpInvoker implements HttpInvoker {
             } else if ("DELETE".equals(method)) {
                 requestBuilder.delete();
             } else {
-                throw new CmisRuntimeException("Invalid HTTP method!");
+                throw new CmisRuntimeException("Unsupported HTTP method: " + method);
             }
 
             // set content type
@@ -269,6 +275,11 @@ public class OkHttpHttpInvoker implements HttpInvoker {
      */
     protected OkHttpClient.Builder createClientBuilder(BindingSession session) {
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
+
+        // Default off: avoid following redirects to unexpected hosts.
+        boolean followRedirects = session.get(SessionParameter.HTTP_FOLLOW_REDIRECTS, false);
+        clientBuilder.followRedirects(followRedirects);
+        clientBuilder.followSslRedirects(followRedirects);
 
         // timeouts
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);

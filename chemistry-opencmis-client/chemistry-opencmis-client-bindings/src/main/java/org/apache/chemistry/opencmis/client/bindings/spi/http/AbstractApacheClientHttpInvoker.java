@@ -74,7 +74,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A {@link HttpInvoker} that uses The Apache HTTP client.
+ * {@link HttpInvoker} backed by Apache HttpClient 5.
+ * <p>
+ * Default request-body mode is {@code auto} (stream to the wire). Session
+ * parameters under {@code org.apache.chemistry.opencmis.binding.http.*}
+ * configure pooling, response buffering, optional {@code materialize} spool
+ * limits, and whether redirects are followed (default {@code false}).
  */
 public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
@@ -90,9 +95,9 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
     public static final int DEFAULT_RESPONSE_BUFFER_LIMIT = 1024 * 1024;
 
     /**
-     * Default max request bytes kept in heap before spilling to a temp file.
-     * Keeps Content-Length known (avoids chunked/Expect-Continue deadlocks)
-     * without loading multi-GB uploads into memory.
+     * Default max request bytes kept in heap before spilling to a temp file
+     * when {@code materialize} mode is enabled. Preserves a known
+     * Content-Length without loading multi-GB uploads entirely into memory.
      */
     public static final int DEFAULT_REQUEST_MEMORY_LIMIT = 1024 * 1024;
 
@@ -176,7 +181,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             } else if ("DELETE".equals(method)) {
                 request = new HttpDelete(url.toString());
             } else {
-                throw new CmisRuntimeException("Invalid HTTP method!");
+                throw new CmisRuntimeException("Unsupported HTTP method: " + method);
             }
 
             request.setConfig(createRequestConfig(session));
@@ -349,11 +354,10 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             IOUtils.closeQuietly(errorStream);
             boolean tempDeleted = true;
             if (requestTempFile != null && requestTempFile.exists()) {
-                tempDeleted = !FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get() && requestTempFile.delete();
+                tempDeleted = deleteTempFileWithRetries(requestTempFile);
                 if (!tempDeleted) {
-                    requestTempFile.deleteOnExit();
                     LOG.warn(
-                            "Failed to delete HTTP request temp file {}; keeping its size in the materialization byte budget",
+                            "Failed to delete HTTP request temp file {}; tracking it so the materialization byte budget can be reclaimed later",
                             requestTempFile.getAbsolutePath());
                 }
             }
@@ -361,17 +365,47 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 if (tempDeleted) {
                     requestSpoolLease.releaseBytes();
                 } else {
-                    requestSpoolLease.abandonBytesAsOrphan();
+                    requestSpoolLease.abandonBytesAsOrphan(requestTempFile);
                 }
             }
         }
     }
 
     /**
-     * Builds a request entity. Default {@code auto} mode streams to the wire
-     * (like {@link DefaultHttpInvoker}) when possible; {@code materialize} mode
-     * spools to memory/disk under classloader-wide limits for a known
-     * Content-Length and repeatable entity.
+     * Tries a few immediate deletes, then {@code deleteOnExit} as a last resort.
+     * Persistent failures are tracked by {@link RequestSpoolLimiter} for reclaim.
+     */
+    private static boolean deleteTempFileWithRetries(File file) {
+        if (file == null) {
+            return true;
+        }
+        if (FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get()) {
+            file.deleteOnExit();
+            return false;
+        }
+        if (!file.exists()) {
+            return true;
+        }
+        for (int attempt = 0; attempt < 3; attempt++) {
+            if (file.delete() || !file.exists()) {
+                return true;
+            }
+            try {
+                Thread.sleep(10L * (attempt + 1));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        file.deleteOnExit();
+        return !file.exists();
+    }
+
+    /**
+     * Builds a request entity. {@code auto} and {@code stream} write once to
+     * the wire (like {@link DefaultHttpInvoker}); {@code materialize} spools
+     * to memory/disk under classloader-wide limits for a known Content-Length
+     * and a repeatable entity.
      */
     protected PreparedRequestBody prepareRequestBody(final Output writer, final boolean gzip,
             final ContentType entityContentType, BindingSession session) throws IOException {
@@ -413,7 +447,8 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 || SessionParameter.HTTP_REQUEST_BODY_MODE_AUTO.equals(mode)) {
             return mode;
         }
-        LOG.warn("Unknown {} value '{}'; using auto", SessionParameter.HTTP_REQUEST_BODY_MODE, mode);
+        LOG.warn("Unknown {} value '{}'; expected auto|stream|materialize — using auto",
+                SessionParameter.HTTP_REQUEST_BODY_MODE, mode);
         return SessionParameter.HTTP_REQUEST_BODY_MODE_AUTO;
     }
 
@@ -430,9 +465,13 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
             if (length >= 0L) {
                 InputStream in = streamable.openStream();
                 if (in == null) {
-                    throw new IOException("StreamableOutput.openStream() returned null");
+                    throw new IOException(
+                            "StreamableOutput.openStream() returned null for declared content length " + length);
                 }
-                HttpEntity entity = new InputStreamEntity(in, length, entityContentType);
+                // Fail fast if the stream ends before the declared length instead of
+                // sending a short body with a larger Content-Length (server hang risk).
+                HttpEntity entity = new InputStreamEntity(new LengthCheckedInputStream(in, length), length,
+                        entityContentType);
                 return new PreparedRequestBody(entity, null, null);
             }
         }
@@ -607,7 +646,9 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         }
         File dir = new File(configured.toString().trim());
         if (!dir.isDirectory() && !dir.mkdirs()) {
-            throw new CmisConnectionException("Cannot create HTTP temp directory: " + dir.getAbsolutePath());
+            throw new CmisConnectionException(
+                    "Cannot create HTTP request-body temp directory (check "
+                            + SessionParameter.HTTP_TEMP_DIR + "): " + dir.getAbsolutePath());
         }
         return dir;
     }
@@ -658,6 +699,14 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         // some servlet containers (including embedded Tomcat used by FIT).
         RequestConfig.Builder builder = RequestConfig.custom().setCookieSpec(StandardCookieSpec.IGNORE)
                 .setExpectContinueEnabled(false);
+
+        // Default off: avoid following redirects to unexpected hosts (SSRF-ish).
+        boolean followRedirects = session.get(SessionParameter.HTTP_FOLLOW_REDIRECTS, false);
+        builder.setRedirectsEnabled(followRedirects);
+        if (followRedirects) {
+            builder.setMaxRedirects(5);
+            builder.setCircularRedirectsAllowed(false);
+        }
 
         int connectTimeout = session.get(SessionParameter.CONNECT_TIMEOUT, -1);
         if (connectTimeout >= 0) {
@@ -852,7 +901,9 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
         private void ensureSpoolBudget(long additional) {
             if (maxSpoolSize > 0 && size + additional > maxSpoolSize) {
                 throw new CmisConnectionException(
-                        "HTTP request body materialization size exceeded (max " + maxSpoolSize + " bytes)");
+                        "HTTP request body materialization size exceeded (max " + maxSpoolSize
+                                + " bytes; raise " + SessionParameter.HTTP_REQUEST_SPOOL_MAX_SIZE
+                                + " or use request body mode auto/stream)");
             }
         }
 
@@ -883,7 +934,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
                 if (deleted) {
                     lease.release();
                 } else {
-                    lease.releasePermitKeepBytes();
+                    lease.releasePermitKeepBytes(tempFile);
                 }
                 lease = null;
             }
@@ -893,21 +944,7 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
          * @return {@code true} if the temp file is gone (or was never present)
          */
         private boolean deleteTempFile() {
-            if (tempFile == null) {
-                return true;
-            }
-            if (FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get()) {
-                tempFile.deleteOnExit();
-                return false;
-            }
-            if (!tempFile.exists()) {
-                return true;
-            }
-            if (tempFile.delete()) {
-                return true;
-            }
-            tempFile.deleteOnExit();
-            return false;
+            return deleteTempFileWithRetries(tempFile);
         }
 
         File getTempFile() {
@@ -945,6 +982,64 @@ public abstract class AbstractApacheClientHttpInvoker implements HttpInvoker {
 
     /** Test-only: force temp-file delete to fail. */
     static final AtomicBoolean FORCE_TEMP_DELETE_FAILURE_FOR_TESTS = new AtomicBoolean();
+
+    /**
+     * InputStream that fails when EOF arrives before {@code expectedLength}
+     * bytes, and stops after that many bytes if the underlying stream is longer.
+     */
+    static final class LengthCheckedInputStream extends FilterInputStream {
+        private final long expectedLength;
+        private long remaining;
+
+        LengthCheckedInputStream(InputStream in, long expectedLength) {
+            super(in);
+            this.expectedLength = expectedLength;
+            this.remaining = expectedLength;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (remaining <= 0L) {
+                return -1;
+            }
+            int b = super.read();
+            if (b < 0) {
+                throw shortStream();
+            }
+            remaining--;
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (remaining <= 0L) {
+                return -1;
+            }
+            int toRead = (int) Math.min(len, remaining);
+            int n = super.read(b, off, toRead);
+            if (n < 0) {
+                throw shortStream();
+            }
+            remaining -= n;
+            return n;
+        }
+
+        @Override
+        public long skip(long n) throws IOException {
+            if (n <= 0L || remaining <= 0L) {
+                return 0L;
+            }
+            long skipped = super.skip(Math.min(n, remaining));
+            remaining -= skipped;
+            return skipped;
+        }
+
+        private IOException shortStream() {
+            return new IOException("Content stream ended after " + (expectedLength - remaining)
+                    + " bytes but ContentStream.getLength()/StreamableOutput.getContentLength() declared "
+                    + expectedLength + " bytes");
+        }
+    }
 
     /**
      * ByteArrayOutputStream that exposes its internal buffer so the request

@@ -174,18 +174,25 @@ HTTP invokers:
      released immediately (`...binding.http.responsebufferlimit`); larger
      bodies stream and must be closed by the caller
    - request body mode (`...binding.http.requestbodymode`, default `auto`):
-     `auto`/`stream` write once to the wire like the JDK invoker
-     (known-length `StreamableOutput` → Content-Length; otherwise chunked
-     `writeTo`; client gzip is applied on the fly). Set `materialize` for the
+     `auto` and `stream` both write once to the wire (no heap/temp spool),
+     like the JDK invoker. Known-length `StreamableOutput` uses
+     Content-Length (stream must match `getLength()`); otherwise chunked
+     `writeTo`. Client gzip is applied on the fly. Set `materialize` for the
      heap/temp-file spool path with classloader-wide limits
      (`...binding.http.requestmemorylimit`, `...requestspoolmaxsize`,
      `...requestspoolmaxconcurrent`, `...requestspoolmaxtotalbytes`). Spool
      limits apply only while materializing; first materialization locks
-     concurrent/total settings.
+     concurrent/total settings. If a spill temp file cannot be deleted,
+     its bytes stay charged until a later request successfully deletes or
+     observes the file gone (deferred reclaim).
+   - HTTP redirects (`...binding.http.followredirects`, default `false` for
+     Apache HttpClient 5 and OkHttp): set `true` only when the repository
+     or proxy is trusted to issue `Location` redirects
  - Explicit alternatives (session parameter
    `org.apache.chemistry.opencmis.binding.httpinvoker.class`):
    - `...spi.http.OkHttpHttpInvoker` (OkHttp 5 / okhttp-jvm; recommended on Android)
-   - `...spi.http.DefaultHttpInvoker` (JDK HttpURLConnection)
+   - `...spi.http.DefaultHttpInvoker` (JDK HttpURLConnection; follows
+     redirects per JDK defaults — not governed by `followredirects`)
  - Closing a session/binding releases cached Apache / OkHttp clients.
 
 Out of scope for this fork line (do not track as OpenCMIS work):
@@ -194,6 +201,15 @@ Out of scope for this fork line (do not track as OpenCMIS work):
  - NemakiWare repository Packages / `lib/built-jars` intake
    (OpenCMIS remains a NemakiWare building block; consumption is a
    separate NemakiWare change)
+
+OpenCMIS fork backlog status (phase 6+):
+
+ - Done in-repo: HC5 default invoker, FIT AtomPub/Browser/WebServices
+   NonVers gates, Android D8 + API 26 emulator smoke, ANTLR4 query
+   compat corpora, HTTP session client close, streaming upload default
+ - Remaining outside this repository: NemakiWare consumption / Packages
+   intake (see above). Upstream `TODO`/`FIXME` comments in inmemory,
+   bridge, TCK, and archetypes are not modernization backlog.
 
 Android client (phase 6+):
 

@@ -156,7 +156,7 @@ public class Response {
             } catch (IOException ioe) {
                 IOUtils.closeQuietly(stream);
                 stream = null;
-                throw new CmisConnectionException("IO exception!", ioe);
+                throw new CmisConnectionException("Failed to read HTTP response body", ioe);
             }
 
             if (!hasResponseStream) {

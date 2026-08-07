@@ -18,6 +18,11 @@
  */
 package org.apache.chemistry.opencmis.client.bindings.spi.http;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Classloader-wide limits for HTTP request-body materialization (heap and/or
@@ -39,12 +46,19 @@ import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
  * successful acquire locks {@code maxConcurrent} and {@code maxTotalBytes} for
  * this classloader. Later acquires that request different values are rejected.
  * <p>
+ * When a temp file cannot be deleted immediately, its bytes stay charged and
+ * the path is tracked. Later acquire / addBytes attempts retry deletion and
+ * reclaim the budget once the file is gone, so a permanent delete failure does
+ * not permanently shrink the classloader-wide budget.
+ * <p>
  * Note: a {@code static} singleton is shared only among code that loads this
  * class through the same classloader (for example one web application). It is
  * not a host-wide or multi-webapp JVM limit unless OpenCMIS is loaded from a
  * shared classloader.
  */
 final class RequestSpoolLimiter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RequestSpoolLimiter.class);
 
     /** Upper bound for a single byte-budget wait (1 day). */
     private static final long MAX_BYTE_WAIT_MS = TimeUnit.DAYS.toMillis(1);
@@ -56,6 +70,7 @@ final class RequestSpoolLimiter {
     /** Guarded by {@link #bytesLock}. */
     private long activeBytes;
     private final AtomicLong orphanedBytes = new AtomicLong();
+    private final ConcurrentLinkedQueue<OrphanedTemp> orphanedTemps = new ConcurrentLinkedQueue<OrphanedTemp>();
     private final Object configLock = new Object();
     private volatile Integer lockedMaxConcurrent;
     private volatile Long lockedMaxTotalBytes;
@@ -81,6 +96,7 @@ final class RequestSpoolLimiter {
                 bytesLock.notifyAll();
             }
             orphanedBytes.set(0);
+            orphanedTemps.clear();
             lockedMaxConcurrent = null;
             lockedMaxTotalBytes = null;
             concurrentPermits = null;
@@ -101,6 +117,10 @@ final class RequestSpoolLimiter {
         return orphanedBytes.get();
     }
 
+    int getOrphanedTempCountForTests() {
+        return orphanedTemps.size();
+    }
+
     Integer getLockedMaxConcurrentForTests() {
         return lockedMaxConcurrent;
     }
@@ -114,8 +134,10 @@ final class RequestSpoolLimiter {
      * {@code acquireTimeoutMs} must be {@code >= 0}.
      */
     SpoolLease acquire(int maxConcurrent, long maxTotalBytes, long acquireTimeoutMs) {
+        reclaimOrphanedTemps();
         if (acquireTimeoutMs < 0) {
-            throw new CmisConnectionException("Request body materialization acquire timeout must not be negative");
+            throw new CmisConnectionException(
+                    "HTTP request body materialization acquire timeout must not be negative");
         }
         int max = Math.max(1, maxConcurrent);
         long totalLimit = maxTotalBytes > 0 ? maxTotalBytes : Long.MAX_VALUE;
@@ -124,11 +146,14 @@ final class RequestSpoolLimiter {
             boolean ok = sem.tryAcquire(Math.max(1L, acquireTimeoutMs), TimeUnit.MILLISECONDS);
             if (!ok) {
                 throw new CmisConnectionException(
-                        "Too many concurrent HTTP request body materializations (classloader-wide max " + max + ")");
+                        "Too many concurrent HTTP request body materializations (classloader-wide max "
+                                + max + "; raise org.apache.chemistry.opencmis.binding.http.requestspoolmaxconcurrent"
+                                + " or use request body mode auto/stream)");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new CmisConnectionException("Interrupted while waiting for request body materialization permit", e);
+            throw new CmisConnectionException(
+                    "Interrupted while waiting for HTTP request body materialization permit", e);
         }
         activeMaterializations.incrementAndGet();
         return new SpoolLease(this, sem, Math.max(1L, acquireTimeoutMs));
@@ -158,10 +183,11 @@ final class RequestSpoolLimiter {
     private static void assertCompatible(int requestedMax, long requestedTotal, int lockedMax, long lockedTotal) {
         if (requestedMax != lockedMax || requestedTotal != lockedTotal) {
             throw new CmisConnectionException(
-                    "HTTP request body materialization classloader-wide limits already set to maxConcurrent="
+                    "HTTP request body materialization classloader-wide limits already locked to maxConcurrent="
                             + lockedMax + ", maxTotalBytes=" + lockedTotal
-                            + "; refusing conflicting session settings maxConcurrent=" + requestedMax
-                            + ", maxTotalBytes=" + requestedTotal);
+                            + "; this session requested maxConcurrent=" + requestedMax + ", maxTotalBytes="
+                            + requestedTotal
+                            + " (align all sessions or restart the classloader / JVM)");
         }
     }
 
@@ -175,6 +201,7 @@ final class RequestSpoolLimiter {
         if (delta <= 0) {
             return;
         }
+        reclaimOrphanedTemps();
         Long maxTotalBytes = lockedMaxTotalBytes;
         long limit = maxTotalBytes == null ? Long.MAX_VALUE : maxTotalBytes.longValue();
         if (limit == Long.MAX_VALUE) {
@@ -186,7 +213,9 @@ final class RequestSpoolLimiter {
         if (alreadyAccounted + delta > limit) {
             throw new CmisConnectionException("HTTP request body materialization total byte limit exceeded: "
                     + "this request body alone needs " + (alreadyAccounted + delta)
-                    + " bytes but the classloader-wide budget is " + limit + " bytes");
+                    + " bytes but the classloader-wide budget is " + limit
+                    + " bytes (raise org.apache.chemistry.opencmis.binding.http.requestspoolmaxtotalbytes"
+                    + " or use request body mode auto/stream)");
         }
         // Clamp so deadline arithmetic cannot overflow when callers configure
         // an effectively infinite timeout (toNanos saturates at Long.MAX_VALUE).
@@ -194,18 +223,26 @@ final class RequestSpoolLimiter {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(clampedWaitMs);
         synchronized (bytesLock) {
             while (activeBytes + delta > limit) {
+                // Another thread may have reclaimed orphans; retry delete while waiting.
+                reclaimOrphanedTempsUnlocked();
+                if (activeBytes + delta <= limit) {
+                    break;
+                }
                 long remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime());
                 if (remainingMs <= 0) {
                     throw new CmisConnectionException(
                             "HTTP request body materialization total byte limit exceeded (classloader-wide max "
-                                    + limit + " bytes); timed out waiting for active bodies to release budget");
+                                    + limit
+                                    + " bytes); timed out waiting for active bodies to release budget"
+                                    + " (raise org.apache.chemistry.opencmis.binding.http.requestspoolmaxtotalbytes"
+                                    + " / connectionrequesttimeout, or use request body mode auto/stream)");
                 }
                 try {
-                    bytesLock.wait(remainingMs);
+                    bytesLock.wait(Math.min(remainingMs, 250L));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new CmisConnectionException(
-                            "Interrupted while waiting for request body materialization byte budget", e);
+                            "Interrupted while waiting for HTTP request body materialization byte budget", e);
                 }
             }
             activeBytes += delta;
@@ -226,9 +263,115 @@ final class RequestSpoolLimiter {
         }
     }
 
-    private void markOrphaned(long bytesAccounted) {
-        if (bytesAccounted > 0) {
-            orphanedBytes.addAndGet(bytesAccounted);
+    /**
+     * Tracks an undeleted temp file whose bytes remain charged. Later
+     * {@link #reclaimOrphanedTemps()} retries deletion and releases the budget.
+     */
+    void abandonTempFile(File file, long bytesAccounted) {
+        if (bytesAccounted <= 0) {
+            return;
+        }
+        orphanedBytes.addAndGet(bytesAccounted);
+        if (file != null) {
+            orphanedTemps.add(new OrphanedTemp(file, bytesAccounted));
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Tracking undeleted HTTP request temp file {} ({} bytes) for deferred reclaim",
+                        file.getAbsolutePath(), Long.valueOf(bytesAccounted));
+            }
+        } else if (LOG.isWarnEnabled()) {
+            LOG.warn(
+                    "Orphaned {} HTTP request materialization bytes without a temp path; "
+                            + "byte budget cannot be reclaimed automatically until classloader reset",
+                    Long.valueOf(bytesAccounted));
+        }
+    }
+
+    /**
+     * Retries deletion of tracked orphan temp files and releases their byte
+     * budget when the file is gone. Safe to call concurrently.
+     *
+     * @return number of orphans reclaimed
+     */
+    int reclaimOrphanedTemps() {
+        if (orphanedTemps.isEmpty()) {
+            return 0;
+        }
+        // Test hook: keep orphans charged while forced delete-failure is active.
+        if (AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get()) {
+            return 0;
+        }
+        List<OrphanedTemp> reclaimed = new ArrayList<OrphanedTemp>();
+        for (Iterator<OrphanedTemp> it = orphanedTemps.iterator(); it.hasNext();) {
+            OrphanedTemp orphan = it.next();
+            if (tryDeleteOrphan(orphan)) {
+                it.remove();
+                reclaimed.add(orphan);
+            }
+        }
+        long released = 0L;
+        for (OrphanedTemp orphan : reclaimed) {
+            released += orphan.bytes;
+        }
+        if (released > 0) {
+            orphanedBytes.addAndGet(-released);
+            subtractBytes(released);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Reclaimed {} orphaned HTTP request temp file(s), {} bytes",
+                        Integer.valueOf(reclaimed.size()), Long.valueOf(released));
+            }
+        }
+        return reclaimed.size();
+    }
+
+    /**
+     * Same as {@link #reclaimOrphanedTemps()} but caller already holds
+     * {@link #bytesLock}. Only updates {@link #activeBytes} under the lock;
+     * does not call {@link #subtractBytes}.
+     */
+    private void reclaimOrphanedTempsUnlocked() {
+        if (orphanedTemps.isEmpty()) {
+            return;
+        }
+        if (AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.get()) {
+            return;
+        }
+        long released = 0L;
+        for (Iterator<OrphanedTemp> it = orphanedTemps.iterator(); it.hasNext();) {
+            OrphanedTemp orphan = it.next();
+            if (tryDeleteOrphan(orphan)) {
+                it.remove();
+                released += orphan.bytes;
+            }
+        }
+        if (released > 0) {
+            orphanedBytes.addAndGet(-released);
+            activeBytes -= released;
+            bytesLock.notifyAll();
+        }
+    }
+
+    private static boolean tryDeleteOrphan(OrphanedTemp orphan) {
+        File file = orphan.file;
+        if (file == null) {
+            return false;
+        }
+        if (!file.exists()) {
+            return true;
+        }
+        if (file.delete()) {
+            return true;
+        }
+        // Still present — leave tracked for a later attempt.
+        return false;
+    }
+
+    private static final class OrphanedTemp {
+        final File file;
+        final long bytes;
+
+        OrphanedTemp(File file, long bytes) {
+            this.file = file;
+            this.bytes = bytes;
         }
     }
 
@@ -278,14 +421,14 @@ final class RequestSpoolLimiter {
         }
 
         /**
-         * Marks charged bytes as orphaned (temp delete failed) without
-         * subtracting them from the active budget.
+         * Keeps charged bytes in the budget and tracks {@code tempFile} for
+         * deferred reclaim when immediate delete failed.
          */
-        void abandonBytesAsOrphan() {
+        void abandonBytesAsOrphan(File tempFile) {
             if (!bytesReleased.compareAndSet(false, true)) {
                 return;
             }
-            limiter.markOrphaned(accountedBytes.getAndSet(0));
+            limiter.abandonTempFile(tempFile, accountedBytes.getAndSet(0));
         }
 
         /** Full successful cleanup: permit + bytes. */
@@ -298,9 +441,9 @@ final class RequestSpoolLimiter {
          * Releases the concurrency permit but keeps accounted bytes charged
          * (temp file delete failed; disk still holds the data).
          */
-        void releasePermitKeepBytes() {
+        void releasePermitKeepBytes(File tempFile) {
             releasePermitOnly();
-            abandonBytesAsOrphan();
+            abandonBytesAsOrphan(tempFile);
         }
     }
 }

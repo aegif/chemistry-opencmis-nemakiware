@@ -521,7 +521,7 @@ public class ApacheClientHttpInvokerPoolTest {
                 CmisConnectionException conflict = assertThrows(CmisConnectionException.class,
                         () -> invoker.invokePOST(url, "application/octet-stream", fillingOutput(4, 4096, (byte) 'M'),
                                 sessionMax2));
-                assertTrue(conflict.getMessage().contains("limits already set"));
+                assertTrue(conflict.getMessage().contains("limits already locked"));
 
                 hold.countDown();
                 assertEquals(201, first.get(10, TimeUnit.SECONDS).getResponseCode());
@@ -563,7 +563,7 @@ public class ApacheClientHttpInvokerPoolTest {
             CmisConnectionException conflict = assertThrows(CmisConnectionException.class,
                     () -> invoker.invokePOST(new UrlBuilder("http://127.0.0.1:1/upload"), "application/octet-stream",
                             fillingOutput(4, 1024, (byte) 'B'), second));
-            assertTrue(conflict.getMessage().contains("limits already set"));
+            assertTrue(conflict.getMessage().contains("limits already locked"));
         } finally {
             HttpInvokerSessionResources.close(first);
             HttpInvokerSessionResources.close(second);
@@ -664,26 +664,43 @@ public class ApacheClientHttpInvokerPoolTest {
     }
 
     @Test
-    public void failedTempDeleteKeepsBytesInBudget() {
+    public void failedTempDeleteKeepsBytesUntilReclaim() throws Exception {
         RequestSpoolLimiter limiter = RequestSpoolLimiter.getInstance();
+        File orphan = Files.createTempFile("opencmis-orphan-", ".bin").toFile();
+        Files.write(orphan.toPath(), new byte[100]);
         RequestSpoolLimiter.SpoolLease lease = limiter.acquire(2, 10_000, 200);
         RequestSpoolLimiter.SpoolLease other = null;
         try {
             lease.addBytes(2500);
-            lease.releasePermitKeepBytes();
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(true);
+            lease.releasePermitKeepBytes(orphan);
             assertEquals(0, limiter.getActiveSpools());
             assertEquals(2500, limiter.getActiveBytes());
             assertEquals(2500, limiter.getOrphanedBytesForTests());
+            assertEquals(1, limiter.getOrphanedTempCountForTests());
 
-            // Orphaned bytes never come back, so this waits out the timeout and fails.
+            // While delete is forced to fail, reclaim is skipped and budget stays charged.
             RequestSpoolLimiter.SpoolLease acquired = limiter.acquire(2, 10_000, 200);
             other = acquired;
             assertThrows(CmisConnectionException.class, () -> acquired.addBytes(8000));
             assertEquals(2500, limiter.getActiveBytes());
+
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
+            assertEquals(1, limiter.reclaimOrphanedTemps());
+            assertFalse(orphan.exists());
+            assertEquals(0, limiter.getActiveBytes());
+            assertEquals(0, limiter.getOrphanedBytesForTests());
+            // Budget is free again.
+            acquired.addBytes(8000);
+            assertEquals(8000, limiter.getActiveBytes());
         } finally {
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
             lease.releasePermitOnly();
             if (other != null) {
                 other.release();
+            }
+            if (orphan.exists()) {
+                orphan.delete();
             }
         }
     }
@@ -777,17 +794,15 @@ public class ApacheClientHttpInvokerPoolTest {
             File[] leftover = tempDir.listFiles();
             assertNotNull(leftover);
             assertTrue(leftover.length >= 1, "undeleted spill temp file should remain");
+
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
+            assertTrue(RequestSpoolLimiter.getInstance().reclaimOrphanedTemps() >= 1);
+            assertEquals(0, RequestSpoolLimiter.getInstance().getActiveBytes());
+            assertEquals(0, RequestSpoolLimiter.getInstance().getOrphanedBytesForTests());
         } finally {
             AbstractApacheClientHttpInvoker.FORCE_SPILL_FAILURE_FOR_TESTS.set(false);
             AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
             HttpInvokerSessionResources.close(session);
-            // Force-delete leftovers for the test cleanup (production leaves them charged).
-            File[] leftover = tempDir.listFiles();
-            if (leftover != null) {
-                for (File file : leftover) {
-                    file.delete();
-                }
-            }
             deleteRecursively(tempDir);
         }
     }
@@ -876,6 +891,11 @@ public class ApacheClientHttpInvokerPoolTest {
             File[] leftover = tempDir.listFiles();
             assertNotNull(leftover);
             assertEquals(1, leftover.length, "undeleted temp file should remain");
+
+            AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
+            assertEquals(1, RequestSpoolLimiter.getInstance().reclaimOrphanedTemps());
+            assertEquals(0, RequestSpoolLimiter.getInstance().getActiveBytes());
+            assertFalse(leftover[0].exists());
         } finally {
             AbstractApacheClientHttpInvoker.FORCE_TEMP_DELETE_FAILURE_FOR_TESTS.set(false);
             HttpInvokerSessionResources.close(session);
@@ -1499,6 +1519,102 @@ public class ApacheClientHttpInvokerPoolTest {
             }
             HttpInvokerSessionResources.close(session);
             deleteRecursively(tempDir);
+        }
+    }
+
+    @Test
+    public void shortStreamableOutputFailsInsteadOfMismatchedContentLength() throws Exception {
+        AtomicLong received = new AtomicLong();
+        ServerHandle server = startServer("/upload", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                received.set(readFully(exchange.getRequestBody()).length);
+                exchange.sendResponseHeaders(201, -1);
+                exchange.close();
+            }
+        });
+        BindingSession session = new SessionImpl();
+        try {
+            final byte[] payload = new byte[100];
+            Arrays.fill(payload, (byte) 'x');
+            StreamableOutput body = new StreamableOutput() {
+                @Override
+                public long getContentLength() {
+                    return 10_000L;
+                }
+
+                @Override
+                public InputStream openStream() {
+                    return new ByteArrayInputStream(payload);
+                }
+
+                @Override
+                public void write(OutputStream out) throws Exception {
+                    out.write(payload);
+                }
+            };
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            assertThrows(CmisConnectionException.class,
+                    () -> invoker.invokePOST(new UrlBuilder("http://127.0.0.1:" + server.port + "/upload"),
+                            "application/octet-stream", body, session));
+        } finally {
+            HttpInvokerSessionResources.close(session);
+            server.stop();
+        }
+    }
+
+    @Test
+    public void redirectsDisabledByDefault() throws Exception {
+        final AtomicLong hits = new AtomicLong();
+        HttpHandler redirecting = new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                hits.incrementAndGet();
+                String path = exchange.getRequestURI().getPath();
+                if ("/start".equals(path)) {
+                    exchange.getResponseHeaders().add("Location",
+                            "http://127.0.0.1:" + exchange.getLocalAddress().getPort() + "/ok");
+                    exchange.sendResponseHeaders(302, -1);
+                    exchange.close();
+                    return;
+                }
+                if ("/ok".equals(path)) {
+                    byte[] ok = "OK".getBytes(StandardCharsets.UTF_8);
+                    exchange.sendResponseHeaders(200, ok.length);
+                    exchange.getResponseBody().write(ok);
+                    exchange.close();
+                    return;
+                }
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+            }
+        };
+        ServerHandle server = startServer("/", redirecting);
+        BindingSession session = new SessionImpl();
+        try {
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokeGET(new UrlBuilder("http://127.0.0.1:" + server.port + "/start"),
+                    session);
+            assertEquals(302, response.getResponseCode());
+            assertEquals(1, hits.get(), "must not follow redirect by default");
+        } finally {
+            HttpInvokerSessionResources.close(session);
+            server.stop();
+        }
+
+        hits.set(0);
+        ServerHandle server2 = startServer("/", redirecting);
+        BindingSession followSession = new SessionImpl();
+        try {
+            followSession.put(SessionParameter.HTTP_FOLLOW_REDIRECTS, "true", true);
+            ApacheClientHttpInvoker invoker = new ApacheClientHttpInvoker();
+            Response response = invoker.invokeGET(new UrlBuilder("http://127.0.0.1:" + server2.port + "/start"),
+                    followSession);
+            assertEquals(200, response.getResponseCode());
+            assertEquals(2, hits.get(), "must follow redirect when enabled");
+        } finally {
+            HttpInvokerSessionResources.close(followSession);
+            server2.stop();
         }
     }
 

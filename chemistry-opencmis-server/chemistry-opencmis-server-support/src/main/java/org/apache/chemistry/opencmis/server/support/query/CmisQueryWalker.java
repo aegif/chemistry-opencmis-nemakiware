@@ -26,8 +26,10 @@ import org.antlr.v4.runtime.RecognitionException;
 
 /**
  * Hand-written replacement for the ANTLR3 {@code CmisQueryWalker} tree grammar.
- * Walks a compatibility {@link CmisTree} AST, fills {@link QueryObject}, and
- * optionally grafts a TextSearch AST into CONTAINS nodes.
+ * Walks a compatibility {@link CmisTree} AST (including ANTLR3-style nil
+ * flattening under {@code SEL_LIST} / joins), fills {@link QueryObject}, and
+ * optionally grafts a TextSearch AST into CONTAINS nodes. Keyword token text
+ * is left as in the input (not normalized to upper case).
  */
 public class CmisQueryWalker {
 

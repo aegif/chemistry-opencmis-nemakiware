@@ -88,13 +88,14 @@ Compared with phase 4 (`1.1.3-nemakiware`):
 
 NemakiWare consumption remains out of scope for phase 5.
 
-Phase 6 modernization notes (2.0.0-nemakiware)
-==============================================
+Phase 6 modernization notes (2.0.0-RC1-nemakiware)
+=================================================
 
 Compared with phase 5 (`1.1.4-nemakiware`):
 
- - Artifact version: `2.0.0-nemakiware` — major bump for ANTLR4 / public
-   API binary breaks vs `1.1.x-nemakiware` (not a drop-in jar replace)
+ - Artifact version: `2.0.0-RC1-nemakiware` (first release candidate for
+   the 2.0.0 line) — major bump for ANTLR4 / public API binary breaks vs
+   `1.1.x-nemakiware` (not a drop-in jar replace)
  - TCK main (`AbstractCmisTest`, `AbstractCmisTestGroup`,
    `JUnitHelper`) switched from JUnit 4 to JUnit Jupiter API
  - Parent test-scoped `junit:junit` removed; TCK depends on
@@ -121,7 +122,7 @@ Compared with phase 5 (`1.1.4-nemakiware`):
    OSGi client embeds HttpClient 5 (default invoker) and OkHttp
  - Android StAX sharing via Woodstox (XmlPull / kxml2 forks removed);
    explicit `stax-api` + `stax2-api` for non-JDK runtimes
- - Maintenance (still `2.0.0-nemakiware`; no micro-bump within the line):
+ - Maintenance on the 2.0.0 RC line:
    - Jacoco `0.8.15`, Mockito `5.23.0`, Log4j `2.25.5`
    - Removed one-shot helper scripts
      (`convert-servlet-imports.sh`, `update-servlet-dependencies.sh`,
@@ -132,14 +133,21 @@ Compared with phase 5 (`1.1.4-nemakiware`):
    `groovy-swing`, `groovy-templates` — not `groovy-all`), Java
    Taskbar icon API, CMIS-1044/1048 UI fixes, Repository Info reload
    on a background worker
+ - RC1 hardening: default streaming uploads, orphan temp-byte reclaim,
+   HTTP redirects off by default (`...binding.http.followredirects`),
+   Content-Length / stream length checks
 
-Breaking / migration notes (2.0.0-nemakiware)
----------------------------------------------
+Breaking / migration notes (2.0.0-RC1-nemakiware)
+------------------------------------------------
 
 This line is intentionally a **major** version relative to
 `1.1.x-nemakiware`. Existing 1.1.x binaries that implement ANTLR3
 `Tree`-based walkers will fail with `NoSuchMethodError` until recompiled
 against `CmisTree`. Coordinate a full rebuild of custom extensions.
+
+Maven coordinates for NemakiWare intake (GitHub Packages):
+
+    org.apache.chemistry.opencmis:*:2.0.0-RC1-nemakiware
 
 ANTLR3 → ANTLR4 (source + binary break for custom query walkers):
 
@@ -202,13 +210,14 @@ Out of scope for this fork line (do not track as OpenCMIS work):
    (OpenCMIS remains a NemakiWare building block; consumption is a
    separate NemakiWare change)
 
-OpenCMIS fork backlog status (phase 6+):
+OpenCMIS fork backlog status (phase 6+ / 2.0.0-RC1):
 
  - Done in-repo: HC5 default invoker, FIT AtomPub/Browser/WebServices
    NonVers gates, Android D8 + API 26 emulator smoke, ANTLR4 query
-   compat corpora, HTTP session client close, streaming upload default
- - Remaining outside this repository: NemakiWare consumption / Packages
-   intake (see above). Upstream `TODO`/`FIXME` comments in inmemory,
+   compat corpora, HTTP session client close, streaming upload default,
+   RC1 safety hardening (redirects, orphan reclaim, length checks)
+ - Next: NemakiWare consumption of `2.0.0-RC1-nemakiware` from GitHub
+   Packages (see above). Upstream `TODO`/`FIXME` comments in inmemory,
    bridge, TCK, and archetypes are not modernization backlog.
 
 Android client (phase 6+):
